@@ -3,7 +3,7 @@ import random
 import os
 
 class Asteroid(pygame.sprite.Sprite):
-    def __init__(self, screen_width, screen_height, scale_factor, level_num):
+    def __init__(self, screen_width, screen_height, scale_factor, level_num, speed):
         super().__init__()
         self.scale_factor = scale_factor
         try:
@@ -29,8 +29,8 @@ class Asteroid(pygame.sprite.Sprite):
         else:
             self.base_rect.x = screen_width
             self.base_rect.y = random.randint(0, screen_height)
-        self.speed_x = random.uniform(-3, 3) * (1 + level_num * 0.3) * scale_factor  # Увеличиваем скорость
-        self.speed_y = random.uniform(-3, 3) * (1 + level_num * 0.3) * scale_factor
+        self.speed_x = random.uniform(-speed, speed) * scale_factor  # Используем переданную скорость
+        self.speed_y = random.uniform(-speed, speed) * scale_factor
         self.angle = 0
         self.rotation_speed = random.uniform(-2, 2)
 
@@ -51,7 +51,7 @@ class Asteroid(pygame.sprite.Sprite):
         scaled_rect.x *= self.scale_factor
         scaled_rect.y *= self.scale_factor
         scaled_rect.width *= self.scale_factor
-        scaled_rect.height *= scale_factor
+        scaled_rect.height *= self.scale_factor
         screen.blit(scaled_img, scaled_rect)
 
     def draw_hitbox(self, screen, scale_factor):
