@@ -412,7 +412,7 @@ class Menu:
             "capacity_level": 0
         })
         base_speed = 5.0
-        y_offset = 50
+        y_offset = 100
         upgrades_list = [
             ("Скорость", self.upgrade_speed, upgrades["speed_level"], base_speed * (1.2 ** upgrades["speed_level"]), "speed_level"),
             ("Прочность", self.upgrade_durability, upgrades["durability_level"], 3 + upgrades["durability_level"], "durability_level"),

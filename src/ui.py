@@ -75,7 +75,7 @@ class UI:
         pygame.draw.rect(capacity_bar, fill_color, (0, 0, filled_width, 30), border_radius=10)
         screen.blit(capacity_bar, (45, 90))
         screen.blit(self.bar_border, (45, 90))
-        capacity_text = self.font.render(f"Мусор: {int(level.player.capacity)}/{int(level.player.max_capacity)}", True, (255, 255, 255))
+        capacity_text = self.font.render(f"{int(level.player.capacity)}/{int(level.player.max_capacity)}", True, (255, 255, 255))
         screen.blit(capacity_text, (255, 90))
 
         # Таймер в формате MM:SS
