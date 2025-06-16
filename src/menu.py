@@ -84,6 +84,16 @@ class Menu:
             self.button_hover.fill((150, 150, 150))
             print("Дефолтные кнопки созданы.")
         try:
+            print("Попытка загрузки спрайтов аккаунтов...")
+            self.account_normal = pygame.image.load("assets/sprites/ui/account_normal.png").convert_alpha()
+            self.account_selected = pygame.image.load("assets/sprites/ui/account_selected.png").convert_alpha()
+            print("Спрайты аккаунтов загружены.")
+        except FileNotFoundError:
+            print("Ошибка загрузки спрайтов аккаунтов, использование button_normal/button_hover...")
+            self.account_normal = self.button_normal
+            self.account_selected = self.button_hover
+            print("Дефолтные спрайты аккаунтов установлены.")
+        try:
             print("Попытка загрузки панели настроек...")
             self.settings_panel = pygame.image.load("assets/sprites/ui/settings_panel.png").convert_alpha()
             self.settings_panel = pygame.transform.scale(self.settings_panel, (900, 600))
@@ -100,7 +110,6 @@ class Menu:
             pygame.mixer.music.play(-1)
             print("Музыка загружена и запущена.")
         except FileNotFoundError:
-            print("Ошибка загрузки музыки...")
             print("Не удалось загрузить: assets/sounds/menu_music.mp3")
         try:
             print("Попытка загрузки спрайтов громкости...")
@@ -133,6 +142,8 @@ class Menu:
         self.settings_file = "settings.json"
         self.input_text = ""  # Текст для ввода имени аккаунта
         self.max_input_length = 15  # Максимальная длина имени
+        self.message_timer = 0  # Таймер для мигающего сообщения
+        self.message_blinks = 0  # Счетчик миганий
         print("Создание директории сохранений...")
         os.makedirs(self.save_dir, exist_ok=True)
         print("Директория сохранений создана или существует.")
@@ -148,13 +159,16 @@ class Menu:
 
     def load_settings(self):
         if os.path.exists(self.settings_file):
-            with open(self.settings_file, 'r') as f:
-                settings = json.load(f)
-                self.music_volume = settings.get("music_volume", 100.0)
-                self.sound_volume = settings.get("sound_volume", 100.0)
-                self.fullscreen = settings.get("fullscreen", False)
-                pygame.mixer.music.set_volume(self.music_volume / 100.0)
-                print(f"Настройки загружены: music_volume={self.music_volume}, sound_volume={self.sound_volume}, fullscreen={self.fullscreen}")
+            try:
+                with open(self.settings_file, 'r') as f:
+                    settings = json.load(f)
+                    self.music_volume = settings.get("music_volume", 100.0)
+                    self.sound_volume = settings.get("sound_volume", 100.0)
+                    self.fullscreen = settings.get("fullscreen", False)
+                    pygame.mixer.music.set_volume(self.music_volume / 100.0)
+                    print(f"Настройки загружены: music_volume={self.music_volume}, sound_volume={self.sound_volume}, fullscreen={self.fullscreen}")
+            except Exception as e:
+                print(f"Ошибка при загрузке {self.settings_file}: {e}")
         else:
             self.save_settings()
 
@@ -164,9 +178,12 @@ class Menu:
             "sound_volume": self.sound_volume,
             "fullscreen": self.fullscreen
         }
-        with open(self.settings_file, 'w') as f:
-            json.dump(settings, f)
-        print("Настройки сохранены.")
+        try:
+            with open(self.settings_file, 'w') as f:
+                json.dump(settings, f)
+            print("Настройки сохранены.")
+        except Exception as e:
+            print(f"Ошибка при записи {self.settings_file}: {e}")
 
     def load_saves(self):
         self.saves = {}
@@ -174,11 +191,14 @@ class Menu:
         while True:
             save_file = os.path.join(self.save_dir, f"save_{index}.json")
             if os.path.exists(save_file):
-                with open(save_file, 'r') as f:
-                    save_data = json.load(f)
-                    account_name = save_data.get("name", f"Аккаунт {index + 1}")
-                    self.saves[account_name] = save_data
-                print(f"Загружено сохранение: {save_file} для аккаунта {account_name}")
+                try:
+                    with open(save_file, 'r') as f:
+                        save_data = json.load(f)
+                        account_name = save_data.get("name", f"Аккаунт {index + 1}")
+                        self.saves[account_name] = save_data
+                    print(f"Загружено сохранение: {save_file} для аккаунта {account_name}")
+                except Exception as e:
+                    print(f"Ошибка при загрузке {save_file}: {e}")
                 index += 1
             else:
                 break
@@ -194,21 +214,27 @@ class Menu:
         while True:
             save_file = os.path.join(self.save_dir, f"save_{index}.json")
             if os.path.exists(save_file):
-                with open(save_file, 'r') as f:
-                    data = json.load(f)
-                    if data.get("name") == account_name:
-                        existing_index = index
-                        break
+                try:
+                    with open(save_file, 'r') as f:
+                        data = json.load(f)
+                        if data.get("name") == account_name:
+                            existing_index = index
+                            break
+                except Exception as e:
+                    print(f"Ошибка при чтении {save_file}: {e}")
                 index += 1
             else:
                 if existing_index is None:
                     existing_index = index
                 break
         save_file = os.path.join(self.save_dir, f"save_{existing_index}.json")
-        with open(save_file, 'w') as f:
-            json.dump(save_data, f)
-        self.saves[account_name] = save_data
-        print(f"Сохранение записано: {save_file} для аккаунта {account_name}")
+        try:
+            with open(save_file, 'w') as f:
+                json.dump(save_data, f)
+            self.saves[account_name] = save_data
+            print(f"Сохранение записано: {save_file} для аккаунта {account_name}")
+        except Exception as e:
+            print(f"Ошибка при записи {save_file}: {e}")
 
     def init_main_menu(self):
         self.state = "main"
@@ -226,8 +252,8 @@ class Menu:
         panel_center_x = self.screen_width // 2 - 450
         panel_center_y = self.screen_height // 2 - 300
         self.buttons = [
-            Button(panel_center_x + (900 - 300) // 2, panel_center_y + 250, self.button_normal, self.button_hover, "СОЗДАТЬ", self.font, lambda: self.create_new_game() if self.input_text.strip() else None),
-            Button(panel_center_x + (900 - 300) // 2, panel_center_y + 350, self.button_normal, self.button_hover, "НАЗАД", self.font, lambda: self.init_main_menu())
+            Button(panel_center_x + (900 - 300) // 2, panel_center_y + 350, self.button_normal, self.button_hover, "СОЗДАТЬ", self.font, lambda: self.create_new_game() if self.input_text.strip() else None),
+            Button(panel_center_x + (900 - 300) // 2, panel_center_y + 450, self.button_normal, self.button_hover, "НАЗАД", self.font, lambda: self.init_main_menu())
         ]
         self.input_text_surface = self.font.render(self.input_text.upper(), True, (255, 255, 255))
         self.input_text_rect = self.input_text_surface.get_rect(center=(self.screen_width // 2, self.screen_height // 2 - 50))
@@ -236,6 +262,12 @@ class Menu:
     def create_new_game(self):
         account_name = self.input_text.strip()
         if account_name and account_name not in self.saves:
+            if len(self.saves) >= 3:
+                self.state = "max_accounts"
+                self.message_timer = pygame.time.get_ticks()
+                self.message_blinks = 0
+                print(f"Достигнуто максимальное число аккаунтов (3): {len(self.saves)}")
+                return
             self.selected_account = account_name
             save_data = {"name": account_name, "balance": 0, "best_time": 0}
             self.save_game(account_name, 0, 0, self.music_volume, self.sound_volume)
@@ -251,8 +283,9 @@ class Menu:
         self.buttons = []
         y_offset = 50
         for account_name in self.saves:
+            initial_image = self.account_selected if account_name == self.selected_account else self.account_normal
             self.buttons.append(
-                Button(panel_center_x + (900 - 300) // 2, panel_center_y + y_offset, self.button_normal, self.button_hover,
+                Button(panel_center_x + (900 - 300) // 2, panel_center_y + y_offset, initial_image, self.account_selected,
                        account_name, self.font, lambda name=account_name: setattr(self, 'selected_account', name))
             )
             y_offset += 100
@@ -260,11 +293,21 @@ class Menu:
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + y_offset, self.button_normal, self.button_hover,
                    "ВЫБРАТЬ", self.font, lambda: self.open_account_menu() if self.selected_account else None),
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + y_offset + 100, self.button_normal, self.button_hover,
-                   "УДАЛИТЬ", self.font, lambda: self.delete_account() if self.selected_account else None),
+                   "УДАЛИТЬ", self.font, lambda: self.init_confirm_delete() if self.selected_account else None),
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + y_offset + 200, self.button_normal, self.button_hover,
                    "НАЗАД", self.font, lambda: self.init_main_menu())
         ])
         print("Меню загрузки инициализировано.")
+
+    def init_confirm_delete(self):
+        self.state = "confirm_delete"
+        panel_center_x = self.screen_width // 2 - 450
+        panel_center_y = self.screen_height // 2 - 300
+        self.buttons = [
+            Button(panel_center_x + (900 - 300 - 100) // 2, panel_center_y + 350, self.button_normal, self.button_hover, "ДА", self.font, lambda: self.delete_account()),
+            Button(panel_center_x + (900 - 300 - 100) // 2 + 350, panel_center_y + 350, self.button_normal, self.button_hover, "НЕТ", self.font, lambda: self.init_load_menu())
+        ]
+        print("Меню подтверждения удаления инициализировано.")
 
     def init_account_menu(self):
         self.state = "account"
@@ -389,22 +432,33 @@ class Menu:
     def delete_account(self):
         if self.selected_account and self.selected_account in self.saves:
             index = 0
+            save_file = None
             while True:
-                save_file = os.path.join(self.save_dir, f"save_{index}.json")
-                if os.path.exists(save_file):
-                    with open(save_file, 'r') as f:
-                        data = json.load(f)
-                        if data.get("name") == self.selected_account:
-                            os.remove(save_file)
-                            print(f"Удалён файл сохранения: {save_file}")
-                            break
+                save_path = os.path.join(self.save_dir, f"save_{index}.json")
+                if os.path.exists(save_path):
+                    try:
+                        with open(save_path, 'r') as f:
+                            data = json.load(f)
+                            if data.get("name") == self.selected_account:
+                                save_file = save_path
+                                break
+                    except Exception as e:
+                        print(f"Ошибка при чтении {save_path}: {e}")
                     index += 1
                 else:
                     break
+            if save_file:
+                try:
+                    os.remove(save_file)
+                    print(f"Удалён файл сохранения: {save_file}")
+                except OSError as e:
+                    print(f"Ошибка при удалении {save_file}: {e}")
             del self.saves[self.selected_account]
+            print(f"Аккаунт {self.selected_account} удалён из памяти.")
             self.selected_account = None
             self.init_load_menu()
-            print(f"Аккаунт {self.selected_account} удалён.")
+        else:
+            print("Ошибка удаления: аккаунт не выбран или не существует.")
 
     def adjust_music_volume(self, step):
         self.music_volume = max(0.0, min(100.0, self.music_volume + step))
@@ -424,13 +478,24 @@ class Menu:
         self.save_settings()
         print(f"Громкость звука изменена: {self.sound_volume}")
 
-    def update(self, mouse_pos, mouse_pressed):
+    def update(self, mouse_pos, mouse_pressed, events):
         print(f"Обновление меню, текущее состояние: {self.state}")
+        if self.state == "max_accounts":
+            current_time = pygame.time.get_ticks()
+            if current_time - self.message_timer >= 1500:  # 1.5 секунды на цикл (1 сек видно, 0.5 сек скрыто)
+                self.message_blinks += 1
+                self.message_timer = current_time
+                print(f"Мигание сообщения: {self.message_blinks}")
+            if self.message_blinks >= 3:  # 3 мигания
+                self.state = "new_account"
+                self.init_new_account()
+                print("Возврат в new_account после сообщения")
+            return self.state
         for button in self.buttons:
             if button.update(mouse_pos, mouse_pressed):
                 button.action()
         if self.state == "new_account":
-            for event in pygame.event.get():  # Убрано дублирование обработки событий
+            for event in events:
                 if event.type == pygame.KEYDOWN:
                     print(f"Обработка клавиши: {event.key}")
                     if event.key == pygame.K_RETURN and self.input_text.strip():
@@ -449,7 +514,7 @@ class Menu:
     def draw(self, screen):
         print(f"Рендеринг меню, состояние: {self.state}")
         screen.blit(self.background, (0, 0))
-        if self.state in ["settings", "load", "account", "new_account", "upgrades", "achievements", "pause", "mission_failed"]:
+        if self.state in ["settings", "load", "account", "new_account", "upgrades", "achievements", "pause", "mission_failed", "confirm_delete"]:
             panel_rect = self.settings_panel.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
             screen.blit(self.settings_panel, panel_rect)
             if self.state == "mission_failed":
@@ -464,5 +529,19 @@ class Menu:
                 prompt_text_rect = prompt_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2 - 100))
                 screen.blit(prompt_text, prompt_text_rect)
                 screen.blit(self.input_text_surface, self.input_text_rect)
+                # Мигающий курсор
+                if pygame.time.get_ticks() % 1000 < 500:  # Мигает каждые 0.5 сек
+                    cursor_surface = self.font.render("|", True, (255, 255, 255))
+                    cursor_rect = cursor_surface.get_rect(left=self.input_text_rect.right + 5, centery=self.input_text_rect.centery)
+                    screen.blit(cursor_surface, cursor_rect)
+            elif self.state == "confirm_delete":
+                text = self.font.render(f"Удалить аккаунт {self.selected_account}?", True, (255, 255, 255))
+                text_rect = text.get_rect(center=(self.screen_width // 2, panel_rect.centery - 50))
+                screen.blit(text, text_rect)
+        elif self.state == "max_accounts":
+            if pygame.time.get_ticks() - self.message_timer < 1000:  # Видно 1 сек
+                text = self.font.render("Максимальное число аккаунтов!", True, (255, 0, 0))
+                text_rect = text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
+                screen.blit(text, text_rect)
         for button in self.buttons:
             button.draw(screen)

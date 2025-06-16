@@ -31,8 +31,9 @@ def main():
     while running:
         mouse_pos = pygame.mouse.get_pos()
         mouse_pressed = pygame.mouse.get_pressed()
+        events = pygame.event.get()
 
-        for event in pygame.event.get():
+        for event in events:
             if event.type == pygame.QUIT:
                 print("Получено событие QUIT, завершение программы...")
                 running = False
@@ -113,6 +114,7 @@ def main():
                     if menu.level_time > save_data["best_time"]:
                         save_data["best_time"] = menu.level_time
                     menu.save_game(menu.selected_account, save_data["balance"], save_data["best_time"], menu.music_volume, menu.sound_volume)
+                    print(f"Баланс сохранён при проигрыше: {save_data['balance']}, время: {save_data['best_time']}")
                     menu.init_mission_failed()
                     game_objects = None
                     continue
@@ -134,21 +136,25 @@ def main():
                 game_objects["ui"].draw(screen, game_objects["level"])
         else:
             print(f"Обновление меню, состояние: {menu.state}")
-            new_state = menu.update(mouse_pos, mouse_pressed)
+            new_state = menu.update(mouse_pos, mouse_pressed, events)
             if new_state is None:
                 print("menu.update вернул None, пропускаем рендеринг...")
                 continue
             menu.draw(screen)
-            if menu.state == "pause" and game_objects:  # Сохраняем баланс при выходе в меню через паузу
+            if menu.state == "main" and game_objects:  # Сохраняем баланс при выходе в главное меню
                 save_data = menu.saves.get(menu.selected_account, {"balance": 0, "best_time": 0})
                 save_data["balance"] += game_objects["level"].balance
                 if menu.level_time > save_data["best_time"]:
                     save_data["best_time"] = menu.level_time
                 menu.save_game(menu.selected_account, save_data["balance"], save_data["best_time"], menu.music_volume, menu.sound_volume)
-                print(f"Баланс сохранён при паузе: {save_data['balance']}")
+                print(f"Баланс сохранён при выходе в главное меню: {save_data['balance']}, время: {save_data['best_time']}")
+                game_objects = None
 
         pygame.display.flip()
         clock.tick(FPS)
+
+    pygame.quit()
+    sys.exit(0)
 
 if __name__ == "__main__":
     try:
@@ -156,4 +162,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Ошибка в основном цикле: {e}", file=sys.stderr)
         input("Нажмите Enter для выхода...")
+        pygame.quit()
         sys.exit(1)
