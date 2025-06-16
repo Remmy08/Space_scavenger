@@ -2,23 +2,29 @@ import pygame
 
 class UI:
     def __init__(self):
-        self.font = pygame.font.Font("assets/fonts/pixel.ttf", 36)
-        self.warning_font = pygame.font.Font("assets/fonts/pixel.ttf", 48)
+        try:
+            self.font = pygame.font.Font("assets/fonts/pixel.ttf", 36)
+            self.warning_font = pygame.font.Font("assets/fonts/pixel.ttf", 48)
+            print("Loaded: assets/fonts/pixel.ttf")
+        except FileNotFoundError:
+            self.font = pygame.font.SysFont("arial", 36)
+            self.warning_font = pygame.font.SysFont("arial", 48)
+            print("Failed to load: assets/fonts/pixel.ttf")
         try:
             self.bar_border = pygame.image.load("assets/sprites/ui/bar_border.png").convert_alpha()
             self.bar_border = pygame.transform.scale(self.bar_border, (200, 30))
             self.pollution_icon = pygame.image.load("assets/sprites/ui/pollution_icon.png").convert_alpha()
-            self.health_icon = pygame.image.load("assets/sprites/ui/health_icon.png").convert_alpha()
+            self.durability_icon = pygame.image.load("assets/sprites/ui/health_icon.png").convert_alpha()
             self.capacity_icon = pygame.image.load("assets/sprites/ui/capacity_icon.png").convert_alpha()
             print("Loaded: bar_border.png, pollution_icon.png, health_icon.png, capacity_icon.png")
         except FileNotFoundError:
             self.bar_border = pygame.Surface((200, 30))
             pygame.draw.rect(self.bar_border, (255, 255, 255), (0, 0, 200, 30), 2)
             self.pollution_icon = pygame.Surface((30, 30))
-            self.health_icon = pygame.Surface((30, 30))
+            self.durability_icon = pygame.Surface((30, 30))
             self.capacity_icon = pygame.Surface((30, 30))
             self.pollution_icon.fill((255, 255, 255))
-            self.health_icon.fill((255, 255, 255))
+            self.durability_icon.fill((255, 255, 255))
             self.capacity_icon.fill((255, 255, 255))
             print("Failed to load: bar_border.png, pollution_icon.png, health_icon.png, capacity_icon.png")
         self.warning_timer = 0
@@ -44,19 +50,19 @@ class UI:
         screen.blit(self.bar_border, (45, 10))
 
         # Прочность
-        screen.blit(self.health_icon, (10, 50))
-        health = level.player.health / 100
-        if health > 0.5:
+        screen.blit(self.durability_icon, (10, 50))
+        durability = level.player.durability / level.player.max_durability
+        if durability > 0.5:
             fill_color = (36, 181, 20)
-        elif health >= 0.2:
+        elif durability >= 0.2:
             fill_color = (247, 194, 45)
         else:
             fill_color = (250, 54, 54)
-        health_bar = pygame.Surface((200, 30))
-        health_bar.fill(bg_color)
-        filled_width = int(200 * health)
-        pygame.draw.rect(health_bar, fill_color, (0, 0, filled_width, 30), border_radius=10)
-        screen.blit(health_bar, (45, 50))
+        durability_bar = pygame.Surface((200, 30))
+        durability_bar.fill(bg_color)
+        filled_width = int(200 * durability)
+        pygame.draw.rect(durability_bar, fill_color, (0, 0, filled_width, 30), border_radius=10)
+        screen.blit(durability_bar, (45, 50))
         screen.blit(self.bar_border, (45, 50))
 
         # Заполненность
@@ -69,7 +75,7 @@ class UI:
         pygame.draw.rect(capacity_bar, fill_color, (0, 0, filled_width, 30), border_radius=10)
         screen.blit(capacity_bar, (45, 90))
         screen.blit(self.bar_border, (45, 90))
-        capacity_text = self.font.render(f"Мусор: {level.player.capacity}/{level.player.max_capacity}", True, (255, 255, 255))
+        capacity_text = self.font.render(f"Мусор: {int(level.player.capacity)}/{int(level.player.max_capacity)}", True, (255, 255, 255))
         screen.blit(capacity_text, (255, 90))
 
         # Таймер в формате MM:SS

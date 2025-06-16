@@ -27,7 +27,6 @@ class Level:
         self.pollution = 0
         self.balance = 0
         self.time_remaining = 0  # Начинаем с 0 для бесконечного режима
-        self.unload_timer = 0
         self.level_num = level_num
         self.pollution_rate = 0.2  # Базовый прирост загрязнения
         self.delta_time = 0
@@ -59,20 +58,12 @@ class Level:
                   f"garbage_spawn_timer={menu.garbage_spawn_timer}, asteroid_spawn_timer={menu.asteroid_spawn_timer}, "
                   f"asteroid_speed={menu.asteroid_speed}")
 
-        if self.pollution >= 100 or self.player.health <= 0:
-            print(f"Условие завершения уровня достигнуто! Загрязнение: {self.pollution}, Здоровье: {self.player.health}")
-
-        if pygame.sprite.collide_rect(self.player, self.unload_zone):
-            self.unload_timer += 1000 / 60
-            if self.unload_timer >= 1000 / 3:
-                self.unload_timer = 0
-                if self.player.capacity > 0:
-                    self.player.capacity -= 1
-                    self.add_balance(1)
-                    self.decrease_pollution(0.2 * (1 + self.level_num * 0.1))
+        if self.pollution >= 100 or self.player.durability <= 0:
+            print(f"Условие завершения уровня достигнуто! Загрязнение: {self.pollution}, Прочность: {self.player.durability}")
 
     def add_balance(self, amount):
         self.balance += amount
+        self.decrease_pollution(0.2 * (1 + self.level_num * 0.1))
         print(f"Баланс увеличен на {amount}, текущий баланс: {self.balance}")
 
     def decrease_pollution(self, amount):

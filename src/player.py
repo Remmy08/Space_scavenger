@@ -2,7 +2,7 @@ import pygame
 import math
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, x, y, upgrades):
         super().__init__()
         try:
             self.original_image = pygame.image.load("assets/sprites/ship.png").convert_alpha()
@@ -13,14 +13,20 @@ class Player(pygame.sprite.Sprite):
             print("Failed to load: assets/sprites/ship.png")
         self.image = self.original_image
         self.rect = self.image.get_rect(center=(x, y))
-        self.speed = 5
-        self.health = 100
+        self.speed = upgrades.get("speed", 5.0)
+        self.durability = upgrades.get("durability", 3)
+        self.max_durability = self.durability  # Для UI
+        self.unloading_speed = upgrades.get("unloading_speed", 3)  # Мусор/сек
+        self.collection_radius = upgrades.get("collection_radius", 100)
+        self.max_capacity = upgrades.get("capacity", 10)
         self.capacity = 0
-        self.max_capacity = 15
-        self.suction_radius = 100
+        self.capacity_prev = 0  # Для отслеживания выгрузки
         self.angle = 0
+        self.unloading_timer = 0
 
-    def update(self, garbage_group):
+    def update(self, garbage_group, unload_zone):
+        self.capacity_prev = self.capacity  # Сохраняем предыдущее значение
+
         keys = pygame.key.get_pressed()
         dx, dy = 0, 0
         if keys[pygame.K_w]:
@@ -62,16 +68,25 @@ class Player(pygame.sprite.Sprite):
                 dx = self.rect.centerx - garbage.rect.centerx
                 dy = self.rect.centery - garbage.rect.centery
                 distance = math.hypot(dx, dy)
-                if distance < self.suction_radius and distance > 0:
+                if distance < self.collection_radius and distance > 0:
                     garbage.rect.x += (dx / distance) * 5
                     garbage.rect.y += (dy / distance) * 5
                     if distance < 40:
                         garbage.kill()
                         self.capacity = min(self.max_capacity, self.capacity + 1)
 
+        if self.capacity > 0 and pygame.sprite.collide_rect(self, unload_zone):
+            self.unloading_timer += 1000 / 60  # Дельта времени в мс (при 60 FPS)
+            unload_amount = (self.unloading_speed * self.unloading_timer) // 1000
+            if unload_amount >= 1:
+                self.capacity = max(0, self.capacity - int(unload_amount))
+                self.unloading_timer -= (int(unload_amount) * 1000) / self.unloading_speed
+        else:
+            self.unloading_timer = 0
+
     def draw(self, screen):
         screen.blit(self.image, self.rect)
 
     def draw_hitbox(self, screen):
         pygame.draw.rect(screen, (255, 0, 0), self.rect, 2)
-        pygame.draw.circle(screen, (0, 0, 255), (int(self.rect.centerx), int(self.rect.centery)), int(self.suction_radius), 2)
+        pygame.draw.circle(screen, (0, 0, 255), (int(self.rect.centerx), int(self.rect.centery)), int(self.collection_radius), 2)

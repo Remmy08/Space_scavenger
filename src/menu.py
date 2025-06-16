@@ -1,6 +1,7 @@
 import pygame
 import os
 import json
+import math
 
 print("Инициализация модуля menu...")
 
@@ -43,6 +44,7 @@ class Button:
             if self.is_hovered:
                 if hasattr(self, 'click_sound'):
                     self.click_sound.play()
+                self.image = self.hover_img
                 return True
         return False
 
@@ -94,6 +96,49 @@ class Menu:
             self.account_selected = self.button_hover
             print("Дефолтные спрайты аккаунтов установлены.")
         try:
+            print("Попытка загрузки спрайтов подтверждения...")
+            self.confirm_yes_normal = pygame.image.load("assets/sprites/ui/confirm_yes_normal.png").convert_alpha()
+            self.confirm_yes_normal = pygame.transform.scale(self.confirm_yes_normal, (150, 60))
+            self.confirm_yes_hover = pygame.image.load("assets/sprites/ui/confirm_yes_hover.png").convert_alpha()
+            self.confirm_yes_hover = pygame.transform.scale(self.confirm_yes_hover, (150, 60))
+            self.confirm_no_normal = pygame.image.load("assets/sprites/ui/confirm_no_normal.png").convert_alpha()
+            self.confirm_no_normal = pygame.transform.scale(self.confirm_no_normal, (150, 60))
+            self.confirm_no_hover = pygame.image.load("assets/sprites/ui/confirm_no_hover.png").convert_alpha()
+            self.confirm_no_hover = pygame.transform.scale(self.confirm_no_hover, (150, 60))
+            print("Спрайты подтверждения загружены.")
+        except FileNotFoundError:
+            print("Ошибка загрузки спрайтов подтверждения, создание дефолтных...")
+            self.confirm_yes_normal = pygame.Surface((150, 60))
+            self.confirm_yes_hover = pygame.Surface((150, 60))
+            self.confirm_no_normal = pygame.Surface((150, 60))
+            self.confirm_no_hover = pygame.Surface((150, 60))
+            self.confirm_yes_normal.fill((100, 100, 100))
+            self.confirm_yes_hover.fill((150, 150, 150))
+            self.confirm_no_normal.fill((100, 100, 100))
+            self.confirm_no_hover.fill((150, 150, 150))
+            print("Дефолтные спрайты подтверждения созданы.")
+        try:
+            print("Попытка загрузки иконок улучшений...")
+            self.upgrade_speed = pygame.image.load("assets/sprites/ui/upgrade_speed.png").convert_alpha()
+            self.upgrade_durability = pygame.image.load("assets/sprites/ui/upgrade_durability.png").convert_alpha()
+            self.upgrade_unloading = pygame.image.load("assets/sprites/ui/upgrade_unloading.png").convert_alpha()
+            self.upgrade_radius = pygame.image.load("assets/sprites/ui/upgrade_radius.png").convert_alpha()
+            self.upgrade_capacity = pygame.image.load("assets/sprites/ui/upgrade_capacity.png").convert_alpha()
+            print("Иконки улучшений загружены.")
+        except FileNotFoundError:
+            print("Ошибка загрузки иконок улучшений, создание дефолтных...")
+            self.upgrade_speed = pygame.Surface((60, 60))
+            self.upgrade_durability = pygame.Surface((60, 60))
+            self.upgrade_unloading = pygame.Surface((60, 60))
+            self.upgrade_radius = pygame.Surface((60, 60))
+            self.upgrade_capacity = pygame.Surface((60, 60))
+            self.upgrade_speed.fill((100, 100, 100))
+            self.upgrade_durability.fill((100, 100, 100))
+            self.upgrade_unloading.fill((100, 100, 100))
+            self.upgrade_radius.fill((100, 100, 100))
+            self.upgrade_capacity.fill((100, 100, 100))
+            print("Дефолтные иконки улучшений созданы.")
+        try:
             print("Попытка загрузки панели настроек...")
             self.settings_panel = pygame.image.load("assets/sprites/ui/settings_panel.png").convert_alpha()
             self.settings_panel = pygame.transform.scale(self.settings_panel, (900, 600))
@@ -140,10 +185,12 @@ class Menu:
         self.selected_account = None
         self.save_dir = "saves"
         self.settings_file = "settings.json"
-        self.input_text = ""  # Текст для ввода имени аккаунта
-        self.max_input_length = 15  # Максимальная длина имени
-        self.message_timer = 0  # Таймер для мигающего сообщения
-        self.message_blinks = 0  # Счетчик миганий
+        self.input_text = ""
+        self.max_input_length = 15
+        self.saves = {}
+        self.message_timer = 0
+        self.message_blinks = 0
+        self.upgrade_levels = {}
         print("Создание директории сохранений...")
         os.makedirs(self.save_dir, exist_ok=True)
         print("Директория сохранений создана или существует.")
@@ -195,6 +242,13 @@ class Menu:
                     with open(save_file, 'r') as f:
                         save_data = json.load(f)
                         account_name = save_data.get("name", f"Аккаунт {index + 1}")
+                        save_data.setdefault("upgrades", {
+                            "speed_level": 0,
+                            "durability_level": 0,
+                            "unloading_level": 0,
+                            "radius_level": 0,
+                            "capacity_level": 0
+                        })
                         self.saves[account_name] = save_data
                     print(f"Загружено сохранение: {save_file} для аккаунта {account_name}")
                 except Exception as e:
@@ -203,11 +257,18 @@ class Menu:
             else:
                 break
 
-    def save_game(self, account_name, balance, best_time, music_volume, sound_volume):
+    def save_game(self, account_name, balance, best_time):
         save_data = {
             "name": account_name,
             "balance": balance,
-            "best_time": best_time
+            "best_time": best_time,
+            "upgrades": self.saves.get(account_name, {}).get("upgrades", {
+                "speed_level": 0,
+                "durability_level": 0,
+                "unloading_level": 0,
+                "radius_level": 0,
+                "capacity_level": 0
+            })
         }
         index = 0
         existing_index = None
@@ -269,8 +330,7 @@ class Menu:
                 print(f"Достигнуто максимальное число аккаунтов (3): {len(self.saves)}")
                 return
             self.selected_account = account_name
-            save_data = {"name": account_name, "balance": 0, "best_time": 0}
-            self.save_game(account_name, 0, 0, self.music_volume, self.sound_volume)
+            self.save_game(account_name, 0, 0)
             self.init_account_menu()
             print(f"Создан новый аккаунт: {account_name}")
         else:
@@ -286,7 +346,7 @@ class Menu:
             initial_image = self.account_selected if account_name == self.selected_account else self.account_normal
             self.buttons.append(
                 Button(panel_center_x + (900 - 300) // 2, panel_center_y + y_offset, initial_image, self.account_selected,
-                       account_name, self.font, lambda name=account_name: setattr(self, 'selected_account', name))
+                       account_name, self.font, lambda name=account_name: self.select_account(name))
             )
             y_offset += 100
         self.buttons.extend([
@@ -299,13 +359,24 @@ class Menu:
         ])
         print("Меню загрузки инициализировано.")
 
+    def select_account(self, account_name):
+        self.selected_account = account_name
+        for button in self.buttons:
+            if isinstance(button.text, pygame.Surface) and button.text.get_at((0, 0)) == self.font.render(account_name.upper(), True, (68, 36, 52)).get_at((0, 0)):
+                button.image = self.account_selected
+            else:
+                button.image = self.account_normal
+        print(f"Выбран аккаунт: {account_name}")
+
     def init_confirm_delete(self):
         self.state = "confirm_delete"
         panel_center_x = self.screen_width // 2 - 450
         panel_center_y = self.screen_height // 2 - 300
+        total_width = 150 + 20 + 150  # Две кнопки по 150px + отступ 20px
+        start_x = panel_center_x + (900 - total_width) // 2
         self.buttons = [
-            Button(panel_center_x + (900 - 300 - 100) // 2, panel_center_y + 350, self.button_normal, self.button_hover, "ДА", self.font, lambda: self.delete_account()),
-            Button(panel_center_x + (900 - 300 - 100) // 2 + 350, panel_center_y + 350, self.button_normal, self.button_hover, "НЕТ", self.font, lambda: self.init_load_menu())
+            Button(start_x, panel_center_y + 350, self.confirm_yes_normal, self.confirm_yes_hover, "ДА", self.font, lambda: self.delete_account()),
+            Button(start_x + 170, panel_center_y + 350, self.confirm_no_normal, self.confirm_no_hover, "НЕТ", self.font, lambda: self.init_load_menu())
         ]
         print("Меню подтверждения удаления инициализировано.")
 
@@ -316,8 +387,7 @@ class Menu:
         self.buttons = [
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 50, self.button_normal, self.button_hover, "ИГРАТЬ", self.font, lambda: self.start_game()),
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 150, self.button_normal, self.button_hover, "УЛУЧШЕНИЯ", self.font, lambda: self.open_upgrades()),
-            Button(panel_center_x + (900 - 300) // 2, panel_center_y + 250, self.button_normal, self.button_hover, "ДОСТИЖЕНИЯ", self.font, lambda: self.open_achievements()),
-            Button(panel_center_x + (900 - 300) // 2, panel_center_y + 350, self.button_normal, self.button_hover, "НАЗАД", self.font, lambda: self.init_load_menu())
+            Button(panel_center_x + (900 - 300) // 2, panel_center_y + 250, self.button_normal, self.button_hover, "НАЗАД", self.font, lambda: self.init_load_menu())
         ]
         save_data = self.saves.get(self.selected_account, {"balance": 0, "best_time": 0})
         self.balance_text = self.font.render(f"Баланс: {save_data['balance']}", True, (255, 255, 255))
@@ -327,6 +397,65 @@ class Menu:
         self.best_time_text = self.font.render(f"Лучшее время: {minutes:02d}:{seconds:02d}", True, (255, 255, 255))
         self.best_time_text_rect = self.best_time_text.get_rect(center=(self.screen_width // 2, panel_center_y - 50))
         print("Меню аккаунта инициализировано.")
+
+    def init_upgrades(self):
+        self.state = "upgrades"
+        panel_center_x = self.screen_width // 2 - 450
+        panel_center_y = self.screen_height // 2 - 300
+        self.buttons = []
+        save_data = self.saves.get(self.selected_account, {"balance": 0, "upgrades": {}})
+        upgrades = save_data.get("upgrades", {
+            "speed_level": 0,
+            "durability_level": 0,
+            "unloading_level": 0,
+            "radius_level": 0,
+            "capacity_level": 0
+        })
+        base_speed = 5.0
+        y_offset = 50
+        upgrades_list = [
+            ("Скорость корабля", self.upgrade_speed, upgrades["speed_level"], base_speed * (1.2 ** upgrades["speed_level"]), "speed_level"),
+            ("Прочность корабля", self.upgrade_durability, upgrades["durability_level"], 3 + upgrades["durability_level"], "durability_level"),
+            ("Скорость выгрузки", self.upgrade_unloading, upgrades["unloading_level"], 3 + 2 * upgrades["unloading_level"], "unloading_level"),
+            ("Радиус сбора", self.upgrade_radius, upgrades["radius_level"], 100 + 30 * upgrades["radius_level"], "radius_level"),
+            ("Вместимость корабля", self.upgrade_capacity, upgrades["capacity_level"], 10 + 10 * upgrades["capacity_level"], "capacity_level")
+        ]
+        if not hasattr(self, 'upgrade_texts'):
+            self.upgrade_texts = []
+        self.upgrade_texts.clear()
+        for name, icon, level, value, key in upgrades_list:
+            icon_rect = icon.get_rect(topleft=(panel_center_x + 50, panel_center_y + y_offset))
+            name_text = self.font.render(name, True, (255, 255, 255))
+            name_rect = name_text.get_rect(topleft=(panel_center_x + 120, panel_center_y + y_offset))
+            level_text = self.font.render(f"Ур. {level}", True, (255, 255, 255))
+            level_rect = level_text.get_rect(topleft=(panel_center_x + 320, panel_center_y + y_offset))
+            value_text = self.font.render(f"{value:.1f}" if key == "speed_level" else str(int(value)), True, (255, 255, 255))
+            value_rect = value_text.get_rect(topleft=(panel_center_x + 420, panel_center_y + y_offset))
+            price = 50 * (2 ** level)
+            price_text = self.font.render(f"Цена: {price}", True, (255, 255, 255) if save_data["balance"] >= price else (255, 0, 0))
+            price_rect = price_text.get_rect(topleft=(panel_center_x + 520, panel_center_y + y_offset))
+            self.buttons.append(
+                Button(panel_center_x + 700, panel_center_y + y_offset, self.button_normal, self.button_hover,
+                       "КУПИТЬ", self.font, lambda k=key, p=price, l=level: self.buy_upgrade(k, p, l))
+            )
+            self.upgrade_texts.append((icon, icon_rect, name_text, name_rect, level_text, level_rect, value_text, value_rect, price_text, price_rect))
+            y_offset += 80
+        self.buttons.append(
+            Button(panel_center_x + (900 - 300) // 2, panel_center_y + y_offset + 50, self.button_normal, self.button_hover,
+                   "НАЗАД", self.font, lambda: self.init_account_menu())
+        )
+        print("Меню улучшений инициализировано.")
+
+    def buy_upgrade(self, upgrade_key, price, current_level):
+        save_data = self.saves.get(self.selected_account, {"balance": 0, "upgrades": {}})
+        if save_data["balance"] >= price:
+            save_data["balance"] -= price
+            save_data["upgrades"][upgrade_key] = current_level + 1
+            self.save_game(self.selected_account, save_data["balance"], save_data.get("best_time", 0))
+            self.init_upgrades()
+            print(f"Куплено улучшение {upgrade_key}, новый уровень: {current_level + 1}, баланс: {save_data['balance']}")
+        else:
+            print(f"Недостаточно средств для улучшения {upgrade_key}, цена: {price}, баланс: {save_data['balance']}")
 
     def init_settings(self):
         self.state = "settings"
@@ -392,7 +521,15 @@ class Menu:
         self.asteroid_spawn_timer = 5000
         self.max_garbage = 5
         self.asteroid_speed = 1.0
-        print("Игра начата.")
+        upgrades = self.saves.get(self.selected_account, {}).get("upgrades", {})
+        self.upgrade_levels = {
+            "speed": 5.0 * (1.2 ** upgrades.get("speed_level", 0)),
+            "durability": 3 + upgrades.get("durability_level", 0),
+            "unloading_speed": 3 + 2 * upgrades.get("unloading_level", 0),
+            "collection_radius": 100 + 30 * upgrades.get("radius_level", 0),
+            "capacity": 10 + 10 * upgrades.get("capacity_level", 0)
+        }
+        print(f"Игра начата с улучшениями: {self.upgrade_levels}")
 
     def restart_level(self):
         self.start_game()
@@ -421,13 +558,8 @@ class Menu:
 
     def open_upgrades(self):
         self.state = "upgrades"
-        self.buttons = [Button(self.screen_width // 2 - 150, self.screen_height // 2, self.button_normal, self.button_hover, "НАЗАД", self.font, lambda: self.init_account_menu())]
+        self.init_upgrades()
         print("Открыто меню улучшений.")
-
-    def open_achievements(self):
-        self.state = "achievements"
-        self.buttons = [Button(self.screen_width // 2 - 150, self.screen_height // 2, self.button_normal, self.button_hover, "НАЗАД", self.font, lambda: self.init_account_menu())]
-        print("Открыто меню достижений.")
 
     def delete_account(self):
         if self.selected_account and self.selected_account in self.saves:
@@ -482,11 +614,11 @@ class Menu:
         print(f"Обновление меню, текущее состояние: {self.state}")
         if self.state == "max_accounts":
             current_time = pygame.time.get_ticks()
-            if current_time - self.message_timer >= 1500:  # 1.5 секунды на цикл (1 сек видно, 0.5 сек скрыто)
+            if current_time - self.message_timer >= 1500:
                 self.message_blinks += 1
                 self.message_timer = current_time
                 print(f"Мигание сообщения: {self.message_blinks}")
-            if self.message_blinks >= 3:  # 3 мигания
+            if self.message_blinks >= 3:
                 self.state = "new_account"
                 self.init_new_account()
                 print("Возврат в new_account после сообщения")
@@ -514,7 +646,7 @@ class Menu:
     def draw(self, screen):
         print(f"Рендеринг меню, состояние: {self.state}")
         screen.blit(self.background, (0, 0))
-        if self.state in ["settings", "load", "account", "new_account", "upgrades", "achievements", "pause", "mission_failed", "confirm_delete"]:
+        if self.state in ["settings", "load", "account", "new_account", "upgrades", "pause", "mission_failed", "confirm_delete"]:
             panel_rect = self.settings_panel.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
             screen.blit(self.settings_panel, panel_rect)
             if self.state == "mission_failed":
@@ -529,8 +661,7 @@ class Menu:
                 prompt_text_rect = prompt_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2 - 100))
                 screen.blit(prompt_text, prompt_text_rect)
                 screen.blit(self.input_text_surface, self.input_text_rect)
-                # Мигающий курсор
-                if pygame.time.get_ticks() % 1000 < 500:  # Мигает каждые 0.5 сек
+                if pygame.time.get_ticks() % 1000 < 500:
                     cursor_surface = self.font.render("|", True, (255, 255, 255))
                     cursor_rect = cursor_surface.get_rect(left=self.input_text_rect.right + 5, centery=self.input_text_rect.centery)
                     screen.blit(cursor_surface, cursor_rect)
@@ -538,8 +669,15 @@ class Menu:
                 text = self.font.render(f"Удалить аккаунт {self.selected_account}?", True, (255, 255, 255))
                 text_rect = text.get_rect(center=(self.screen_width // 2, panel_rect.centery - 50))
                 screen.blit(text, text_rect)
+            elif self.state == "upgrades":
+                for icon, icon_rect, name_text, name_rect, level_text, level_rect, value_text, value_rect, price_text, price_rect in self.upgrade_texts:
+                    screen.blit(icon, icon_rect)
+                    screen.blit(name_text, name_rect)
+                    screen.blit(level_text, level_rect)
+                    screen.blit(value_text, value_rect)
+                    screen.blit(price_text, price_rect)
         elif self.state == "max_accounts":
-            if pygame.time.get_ticks() - self.message_timer < 1000:  # Видно 1 сек
+            if pygame.time.get_ticks() - self.message_timer < 1000:
                 text = self.font.render("Максимальное число аккаунтов!", True, (255, 0, 0))
                 text_rect = text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
                 screen.blit(text, text_rect)
