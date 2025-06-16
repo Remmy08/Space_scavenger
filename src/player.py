@@ -20,13 +20,10 @@ class Player(pygame.sprite.Sprite):
         self.collection_radius = upgrades.get("collection_radius", 100)
         self.max_capacity = upgrades.get("capacity", 10)
         self.capacity = 0
-        self.capacity_prev = 0  # Для отслеживания выгрузки
         self.angle = 0
         self.unloading_timer = 0
 
-    def update(self, garbage_group, unload_zone):
-        self.capacity_prev = self.capacity  # Сохраняем предыдущее значение
-
+    def update(self, level, garbage_group, unload_zone):
         keys = pygame.key.get_pressed()
         dx, dy = 0, 0
         if keys[pygame.K_w]:
@@ -74,13 +71,16 @@ class Player(pygame.sprite.Sprite):
                     if distance < 40:
                         garbage.kill()
                         self.capacity = min(self.max_capacity, self.capacity + 1)
+                        print(f"Собран мусор: capacity={self.capacity}/{self.max_capacity}")
 
         if self.capacity > 0 and pygame.sprite.collide_rect(self, unload_zone):
             self.unloading_timer += 1000 / 60  # Дельта времени в мс (при 60 FPS)
             unload_amount = (self.unloading_speed * self.unloading_timer) // 1000
             if unload_amount >= 1:
                 self.capacity = max(0, self.capacity - int(unload_amount))
+                level.add_balance(int(unload_amount))  # Добавляем выгруженный мусор в баланс
                 self.unloading_timer -= (int(unload_amount) * 1000) / self.unloading_speed
+                print(f"Выгрузка: unload_amount={unload_amount}, capacity={self.capacity}, balance={level.balance}")
         else:
             self.unloading_timer = 0
 

@@ -94,7 +94,7 @@ def main():
 
             if game_objects:
                 print(f"Обновление объектов игры... Время: {menu.level_time}, Загрязнение: {game_objects['level'].pollution}, Прочность: {game_objects['player'].durability}")
-                game_objects["player"].update(game_objects["garbage_group"], game_objects["level"].unload_zone)
+                game_objects["player"].update(game_objects["level"], game_objects["garbage_group"], game_objects["level"].unload_zone)
                 game_objects["garbage_group"].update(game_objects["player"])
                 game_objects["asteroid_group"].update()
                 game_objects["level"].update(menu.level_time, menu)
@@ -106,7 +106,7 @@ def main():
                     asteroid.kill()
 
                 if game_objects["level"].pollution >= 100 or game_objects["player"].durability <= 0:
-                    print(f"Условие завершения: pollution={game_objects['level'].pollution}, durability={game_objects['player'].durability}")
+                    print(f"Условие завершения: pollution={game_objects['level'].pollution}, balance={game_objects['level'].balance}, durability={game_objects['player'].durability}")
                     save_data = menu.saves.get(menu.selected_account, {"balance": 0, "best_time": 0})
                     save_data["balance"] += game_objects["level"].balance
                     if menu.level_time > save_data["best_time"]:
@@ -116,8 +116,6 @@ def main():
                     menu.init_mission_failed()
                     game_objects = None
                     continue
-                elif game_objects["player"].capacity > game_objects["player"].capacity_prev and pygame.sprite.collide_rect(game_objects["player"], game_objects["level"].unload_zone):
-                    game_objects["level"].add_balance(int(game_objects["player"].capacity_prev - game_objects["player"].capacity))
 
                 screen.blit(game_objects["background"], (0, 0))
                 game_objects["level"].unload_zone.draw(screen)
@@ -133,17 +131,18 @@ def main():
                         asteroid.draw_hitbox(screen)
                 game_objects["ui"].draw(screen, game_objects["level"])
         else:
-            print(f"Обновление меню, состояние: {menu.state}")
+            # print(f"Обновление меню, состояние: {menu.state}")
             new_state = menu.update(mouse_pos, mouse_pressed, events)
             if new_state is None:
                 print("menu.update вернул None, пропускаем рендеринг...")
                 continue
             menu.draw(screen)
             if menu.state == "main" and game_objects:
+                print(f"Сохранение при выходе в меню: balance={game_objects['level'].balance}")
                 save_data = menu.saves.get(menu.selected_account, {"balance": 0, "best_time": 0})
                 save_data["balance"] += game_objects["level"].balance
                 if menu.level_time > save_data["best_time"]:
-                    save_data["best_time"] = menu.level_time
+                        save_data["best_time"] = menu.level_time
                 menu.save_game(menu.selected_account, save_data["balance"], save_data["best_time"])
                 print(f"Баланс сохранён при выходе в главное меню: {save_data['balance']}, время: {save_data['best_time']}")
                 game_objects = None
