@@ -3,9 +3,8 @@ import random
 import os
 
 class Asteroid(pygame.sprite.Sprite):
-    def __init__(self, screen_width, screen_height, scale_factor, level_num, speed):
+    def __init__(self, screen_width, screen_height, level_num, speed):
         super().__init__()
-        self.scale_factor = scale_factor
         try:
             self.original_image = pygame.image.load("assets/sprites/asteroids/asteroid_1.png").convert_alpha()
             print("Loaded: assets/sprites/asteroids/asteroid_1.png")
@@ -14,50 +13,37 @@ class Asteroid(pygame.sprite.Sprite):
             self.original_image.fill((128, 128, 128))
             print("Failed to load: assets/sprites/asteroids/asteroid_1.png")
         self.image = self.original_image
-        self.base_rect = self.image.get_rect()
-        self.rect = self.base_rect.copy()
+        self.rect = self.image.get_rect()
         side = random.choice(["top", "bottom", "left", "right"])
         if side == "top":
-            self.base_rect.x = random.randint(0, screen_width)
-            self.base_rect.y = -64
+            self.rect.x = random.randint(0, screen_width)
+            self.rect.y = -64
         elif side == "bottom":
-            self.base_rect.x = random.randint(0, screen_width)
-            self.base_rect.y = screen_height
+            self.rect.x = random.randint(0, screen_width)
+            self.rect.y = screen_height
         elif side == "left":
-            self.base_rect.x = -64
-            self.base_rect.y = random.randint(0, screen_height)
+            self.rect.x = -64
+            self.rect.y = random.randint(0, screen_height)
         else:
-            self.base_rect.x = screen_width
-            self.base_rect.y = random.randint(0, screen_height)
-        self.speed_x = random.uniform(-speed, speed) * scale_factor  # Используем переданную скорость
-        self.speed_y = random.uniform(-speed, speed) * scale_factor
+            self.rect.x = screen_width
+            self.rect.y = random.randint(0, screen_height)
+        self.speed_x = random.uniform(-speed, speed)
+        self.speed_y = random.uniform(-speed, speed)
         self.angle = 0
         self.rotation_speed = random.uniform(-2, 2)
 
     def update(self):
-        self.base_rect.x += self.speed_x
-        self.base_rect.y += self.speed_y
+        self.rect.x += self.speed_x
+        self.rect.y += self.speed_y
         self.angle += self.rotation_speed
         self.image = pygame.transform.rotate(self.original_image, self.angle)
-        self.base_rect = self.image.get_rect(center=self.base_rect.center)
-        self.rect = self.base_rect.copy()
-        if (self.base_rect.right < -100 or self.base_rect.left > 1920 + 100 or
-                self.base_rect.bottom < -100 or self.base_rect.top > 1080 + 100):
+        self.rect = self.image.get_rect(center=self.rect.center)
+        if (self.rect.right < -100 or self.rect.left > 1920 + 100 or
+                self.rect.bottom < -100 or self.rect.top > 1080 + 100):
             self.kill()
 
     def draw(self, screen):
-        scaled_img = pygame.transform.scale(self.image, (int(self.image.get_width() * self.scale_factor), int(self.image.get_height() * self.scale_factor)))
-        scaled_rect = self.base_rect.copy()
-        scaled_rect.x *= self.scale_factor
-        scaled_rect.y *= self.scale_factor
-        scaled_rect.width *= self.scale_factor
-        scaled_rect.height *= self.scale_factor
-        screen.blit(scaled_img, scaled_rect)
+        screen.blit(self.image, self.rect)
 
-    def draw_hitbox(self, screen, scale_factor):
-        scaled_rect = self.rect.copy()
-        scaled_rect.x *= scale_factor
-        scaled_rect.y *= scale_factor
-        scaled_rect.width *= scale_factor
-        scaled_rect.height *= scale_factor
-        pygame.draw.rect(screen, (255, 0, 0), scaled_rect, 2)
+    def draw_hitbox(self, screen):
+        pygame.draw.rect(screen, (255, 0, 0), self.rect, 2)
