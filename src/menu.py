@@ -57,10 +57,12 @@ class Menu:
     def __init__(self, screen_width, screen_height):
         print(f"Инициализация Menu с размерами {screen_width}x{screen_height}...")
         self.screen_width, self.screen_height = screen_width, screen_height
+        self.background_speed = 1
+        self.background_y = 0
         print("Загрузка шрифта...")
         try:
             self.font = pygame.font.Font("assets/fonts/pixel.ttf", 36)
-            self.upgrade_font = pygame.font.Font("assets/fonts/pixel.ttf", 24)  # Уменьшенный шрифт для улучшений
+            self.upgrade_font = pygame.font.Font("assets/fonts/pixel.ttf", 24)
             print("Шрифты загружены.")
         except FileNotFoundError:
             print("Не удалось загрузить: assets/fonts/pixel.ttf")
@@ -163,11 +165,11 @@ class Menu:
             self.settings_panel.fill((50, 50, 50))
             print("Дефолтная панель создана.")
         try:
-            print("Попытка загрузки музыки...")
+            print("Попытка загрузки музыки меню...")
             pygame.mixer.music.load("assets/sounds/menu_music.mp3")
             pygame.mixer.music.set_volume(100.0 / 100.0)
             pygame.mixer.music.play(-1)
-            print("Музыка загружена и запущена.")
+            print("Музыка меню загружена и запущена.")
         except FileNotFoundError:
             print("Не удалось загрузить: assets/sounds/menu_music.mp3")
         try:
@@ -319,7 +321,7 @@ class Menu:
             Button(self.screen_width // 2 - 150, self.screen_height // 2 + 50, self.button_normal, self.button_hover, "НАСТРОЙКИ", self.font, lambda: self.open_settings()),
             Button(self.screen_width // 2 - 150, self.screen_height // 2 + 150, self.button_normal, self.button_hover, "ВЫХОД", self.font, lambda: pygame.event.post(pygame.event.Event(pygame.QUIT)))
         ]
-        print("Главное меню инициализировано.")
+        print("Главное меню инициализировано с кнопками:", [b.text.get_at((0,0)) if b.text else None for b in self.buttons])
 
     def init_new_account(self):
         self.state = "new_account"
@@ -430,7 +432,7 @@ class Menu:
         upgrades_list = [
             ("Скорость", self.upgrade_speed, upgrades["speed_level"], base_speed * (1.2 ** upgrades["speed_level"]), "speed_level"),
             ("Прочность", self.upgrade_durability, upgrades["durability_level"], 3 + upgrades["durability_level"], "durability_level"),
-            ("Разгрузка", self.upgrade_unloading, upgrades["unloading_level"], 3 + 2 * upgrades["unloading_level"], "unloading_level"),
+            ("Скорость", self.upgrade_unloading, upgrades["unloading_level"], 3 + 2 * upgrades["unloading_level"], "unloading_level"),
             ("Радиус сбора", self.upgrade_radius, upgrades["radius_level"], 100 + 30 * upgrades["radius_level"], "radius_level"),
             ("Вместимость", self.upgrade_capacity, upgrades["capacity_level"], 10 + 10 * upgrades["capacity_level"], "capacity_level")
         ]
@@ -448,31 +450,33 @@ class Menu:
             price = 50 * (2 ** level)
             price_text = self.upgrade_font.render(f"Цена: {price}", True, (255, 255, 255) if save_data["balance"] >= price else (255, 0, 0))
             price_rect = price_text.get_rect(topleft=(panel_center_x + 520, panel_center_y + y_offset))
-            self.buttons.append(
-                Button(panel_center_x + 680, panel_center_y + y_offset, self.buy_button_normal, self.buy_button_hover,
-                       "КУПИТЬ", self.upgrade_font, lambda k=key, p=price, l=level: self.buy_upgrade(k, p, l))
-            )
+            max_level = 7 if key == "durability_level" else 10
+            if level < max_level:
+                self.buttons.append(
+                    Button(panel_center_x + 700, panel_center_y + y_offset, self.buy_button_normal, self.buy_button_hover,
+                           "КУПИТЬ", self.upgrade_font, lambda k=key, p=price, l=level: self.buy_upgrade(k, p, l))
+                )
             self.upgrade_texts.append((icon, icon_rect, name_text, name_rect, level_text, level_rect, value_text, value_rect, price_text, price_rect))
             y_offset += 80
         self.buttons.append(
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + y_offset + 10, self.button_normal, self.button_hover,
                    "НАЗАД", self.font, lambda: self.init_account_menu())
         )
-        # Добавляем текст баланса
         self.balance_text = self.font.render(f"Баланс: {save_data['balance']}", True, (255, 255, 255))
         self.balance_text_rect = self.balance_text.get_rect(center=(self.screen_width // 2, panel_center_y + 45))
         print("Меню улучшений инициализировано.")
 
     def buy_upgrade(self, upgrade_key, price, current_level):
         save_data = self.saves.get(self.selected_account, {"balance": 0, "upgrades": {}})
-        if save_data["balance"] >= price:
+        max_level = 7 if upgrade_key == "durability_level" else 10
+        if save_data["balance"] >= price and current_level < max_level:
             save_data["balance"] -= price
             save_data["upgrades"][upgrade_key] = current_level + 1
             self.save_game(self.selected_account, save_data["balance"], save_data.get("best_time", 0))
             self.init_upgrades()
             print(f"Куплено улучшение {upgrade_key}, новый уровень: {current_level + 1}, баланс: {save_data['balance']}")
         else:
-            print(f"Недостаточно средств для улучшения {upgrade_key}, цена: {price}, баланс: {save_data['balance']}")
+            print(f"Недостаточно средств или максимальный уровень для {upgrade_key}, цена: {price}, баланс: {save_data['balance']}")
 
     def init_settings(self):
         self.state = "settings"
@@ -517,7 +521,7 @@ class Menu:
             if hasattr(self, 'click_sound'):
                 self.click_sound.play()
         self.buttons = [
-            Button(panel_center_x + (900 - 300) // 2, panel_center_y + 400, self.button_normal, self.button_hover, "ГЛАВНОЕ МЕНЮ", self.font, lambda: self.init_main_menu())
+            Button(panel_center_x + (900 - 300) // 2, panel_center_y + 400, self.button_normal, self.button_hover, "Вернуться", self.font, lambda: self.init_account_menu())
         ]
         print("Меню 'Миссия провалена' инициализировано.")
 
@@ -527,6 +531,14 @@ class Menu:
 
     def start_game(self):
         pygame.mixer.music.stop()
+        try:
+            print("Попытка загрузки игровой музыки...")
+            pygame.mixer.music.load("assets/sounds/game_music.mp3")
+            pygame.mixer.music.set_volume(self.music_volume / 100.0)
+            pygame.mixer.music.play(-1)
+            print("Игровая музыка загружена и запущена.")
+        except FileNotFoundError:
+            print("Не удалось загрузить: assets/sounds/game_music.mp3")
         self.state = "game"
         self.current_level = 1
         self.level_time = 0
@@ -546,10 +558,43 @@ class Menu:
         print(f"Игра начата с улучшениями: {self.upgrade_levels}")
 
     def restart_level(self):
-        self.start_game()
-        print("Уровень перезапущен.")
+        pygame.mixer.music.stop()
+        try:
+            print("Попытка загрузки игровой музыки для перезапуска...")
+            pygame.mixer.music.load("assets/sounds/game_music.mp3")
+            pygame.mixer.music.set_volume(self.music_volume / 100.0)
+            pygame.mixer.music.play(-1)
+            print("Игровая музыка загружена и запущена.")
+        except FileNotFoundError:
+            print("Не удалось загрузить: assets/sounds/game_music.mp3")
+        self.state = "game"
+        self.current_level = 1
+        self.level_time = 0
+        self.pollution_factor = 0.2
+        self.garbage_spawn_timer = 2000
+        self.asteroid_spawn_timer = 5000
+        self.max_garbage = 5
+        self.asteroid_speed = 1.0
+        upgrades = self.saves.get(self.selected_account, {}).get("upgrades", {})
+        self.upgrade_levels = {
+            "speed": 5.0 * (1.2 ** upgrades.get("speed_level", 0)),
+            "durability": 3 + upgrades.get("durability_level", 0),
+            "unloading_speed": 3 + 2 * upgrades.get("unloading_level", 0),
+            "collection_radius": 100 + 30 * upgrades.get("radius_level", 0),
+            "capacity": 10 + 10 * upgrades.get("capacity_level", 0)
+        }
+        print("Уровень перезагружен с начальными параметрами.")
 
     def exit_to_main_menu(self):
+        pygame.mixer.music.stop()
+        try:
+            print("Попытка загрузки музыки меню...")
+            pygame.mixer.music.load("assets/sounds/menu_music.mp3")
+            pygame.mixer.music.set_volume(self.music_volume / 100.0)
+            pygame.mixer.music.play(-1)
+            print("Музыка меню загружена и запущена.")
+        except FileNotFoundError:
+            print("Не удалось загрузить: assets/sounds/menu_music.mp3")
         self.state = "main"
         self.init_main_menu()
         print("Выход в главное меню.")
@@ -625,16 +670,20 @@ class Menu:
         print(f"Громкость звука изменена: {self.sound_volume}")
 
     def update(self, mouse_pos, mouse_pressed, events):
+        print(f"Обновление меню, текущее состояние: {self.state}")
+        self.background_y += self.background_speed
+        if self.background_y >= self.screen_height:
+            self.background_y -= self.screen_height
         if self.state == "max_accounts":
             current_time = pygame.time.get_ticks()
             if current_time - self.message_timer >= 1500:
                 self.message_blinks += 1
                 self.message_timer = current_time
                 print(f"Мигание сообщения: {self.message_blinks}")
-            if self.message_blinks >= 3:
-                self.state = "new_account"
-                self.init_new_account()
-                print("Возврат в new_account после сообщения")
+                if self.message_blinks >= 3:
+                    self.state = "new_account"
+                    self.init_new_account()
+                    print("Возврат в new_account после сообщения")
             return self.state
         for button in self.buttons:
             if button.update(mouse_pos, mouse_pressed):
@@ -657,7 +706,8 @@ class Menu:
         return self.state
 
     def draw(self, screen):
-        screen.blit(self.background, (0, 0))
+        screen.blit(self.background, (0, self.background_y))
+        screen.blit(self.background, (0, self.background_y - self.screen_height))
         if self.state in ["settings", "load", "account", "new_account", "upgrades", "pause", "mission_failed", "confirm_delete"]:
             panel_rect = self.settings_panel.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
             screen.blit(self.settings_panel, panel_rect)
@@ -690,9 +740,15 @@ class Menu:
                     screen.blit(value_text, value_rect)
                     screen.blit(price_text, price_rect)
         elif self.state == "max_accounts":
+            panel_rect = self.settings_panel.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
+            screen.blit(self.settings_panel, panel_rect)
             if pygame.time.get_ticks() - self.message_timer < 1000:
                 text = self.font.render("Максимальное число аккаунтов!", True, (255, 0, 0))
-                text_rect = text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
+                text_rect = text.get_rect(center=(self.screen_width // 2, (self.screen_height // 2) - 100))
+                screen.blit(text, text_rect)
+                text = self.font.render("Удалите аккаунт чтобы создать новый.", True, (255, 0, 0))
+                text_rect = text.get_rect(center=(self.screen_width // 2, (self.screen_height // 2) - 50))
                 screen.blit(text, text_rect)
         for button in self.buttons:
             button.draw(screen)
+        print(f"Отрисовка меню завершена, состояние: {self.state}")

@@ -16,8 +16,9 @@ class Asteroid(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = random.randint(0, screen_width - 64)
         self.rect.y = random.randint(0, screen_height - 64)
-        self.speed_x = random.uniform(-speed, speed)
-        self.speed_y = random.uniform(-speed, speed)
+        # Гарантируем ненулевую скорость
+        self.speed_x = random.choice([-1, 1]) * random.uniform(0.5 * speed, speed)
+        self.speed_y = random.choice([-1, 1]) * random.uniform(0.5 * speed, speed)
         self.angle = 0
         self.rotation_speed = random.uniform(-2, 2)
 

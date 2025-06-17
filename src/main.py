@@ -53,7 +53,7 @@ def main():
                     game_objects["asteroid_group"].add(Asteroid(BASE_WIDTH, BASE_HEIGHT, menu.current_level, menu.asteroid_speed))
 
         if menu.state == "game":
-            print(f"Состояние игры: game_objects = {game_objects}")
+            print(f"Состояние игры: game_objects = {bool(game_objects)}")
             if not game_objects:
                 print("Инициализация game_objects...")
                 try:
@@ -85,15 +85,20 @@ def main():
                         "show_hitboxes": show_hitboxes,
                         "background": background,
                         "garbage_spawn_timer": garbage_spawn_timer,
-                        "asteroid_spawn_timer": asteroid_spawn_timer
+                        "asteroid_spawn_timer": asteroid_spawn_timer,
+                        "background_y": 0,
+                        "background_speed": 1
                     }
-                    print("game_objects инициализирован: ", game_objects)
+                    print("game_objects инициализирован")
                 except Exception as e:
                     print(f"Ошибка инициализации game_objects: {e}")
                     game_objects = None
 
             if game_objects:
                 print(f"Обновление объектов игры... Время: {menu.level_time}, Загрязнение: {game_objects['level'].pollution}, Прочность: {game_objects['player'].durability}")
+                game_objects["background_y"] += game_objects["background_speed"]
+                if game_objects["background_y"] >= BASE_HEIGHT:
+                    game_objects["background_y"] -= BASE_HEIGHT
                 game_objects["player"].update(game_objects["level"], game_objects["garbage_group"], game_objects["level"].unload_zone)
                 game_objects["garbage_group"].update(game_objects["player"])
                 game_objects["asteroid_group"].update()
@@ -117,7 +122,8 @@ def main():
                     game_objects = None
                     continue
 
-                screen.blit(game_objects["background"], (0, 0))
+                screen.blit(game_objects["background"], (0, game_objects["background_y"]))
+                screen.blit(game_objects["background"], (0, game_objects["background_y"] - BASE_HEIGHT))
                 game_objects["level"].unload_zone.draw(screen)
                 game_objects["garbage_group"].draw(screen)
                 game_objects["asteroid_group"].draw(screen)
@@ -132,13 +138,18 @@ def main():
                 game_objects["ui"].draw(screen, game_objects["level"])
         else:
             new_state = menu.update(mouse_pos, mouse_pressed, events)
+            print(f"Menu.update вернул: {new_state}")
             if new_state is None:
-                print("menu.update вернул None, пропускаем рендеринг...")
-                continue
+                print("Menu.update вернул None, продолжаем рендеринг...")
             menu.draw(screen)
             if menu.state == "main" and game_objects:
                 print("Переход в главное меню, сброс game_objects...")
-                game_objects = None  # Сбрасываем game_objects без сохранения
+                pygame.mixer.music.stop()
+                game_objects = None
+            elif menu.state == "game" and game_objects is not None:
+                if hasattr(menu, 'restart_level') and any(b.action.__name__ == 'restart_level' for b in menu.buttons if hasattr(b, 'action')):
+                    print("Перезапуск уровня, сброс game_objects...")
+                    game_objects = None
 
         pygame.display.flip()
         clock.tick(FPS)
