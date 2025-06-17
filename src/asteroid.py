@@ -14,19 +14,8 @@ class Asteroid(pygame.sprite.Sprite):
             print("Failed to load: assets/sprites/asteroids/asteroid_1.png")
         self.image = self.original_image
         self.rect = self.image.get_rect()
-        side = random.choice(["top", "bottom", "left", "right"])
-        if side == "top":
-            self.rect.x = random.randint(0, screen_width)
-            self.rect.y = -64
-        elif side == "bottom":
-            self.rect.x = random.randint(0, screen_width)
-            self.rect.y = screen_height
-        elif side == "left":
-            self.rect.x = -64
-            self.rect.y = random.randint(0, screen_height)
-        else:
-            self.rect.x = screen_width
-            self.rect.y = random.randint(0, screen_height)
+        self.rect.x = random.randint(0, screen_width - 64)
+        self.rect.y = random.randint(0, screen_height - 64)
         self.speed_x = random.uniform(-speed, speed)
         self.speed_y = random.uniform(-speed, speed)
         self.angle = 0

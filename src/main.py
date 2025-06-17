@@ -36,12 +36,12 @@ def main():
                 print("Получено событие QUIT, завершение программы...")
                 running = False
             if event.type == pygame.KEYDOWN:
-                if menu.state == "game" and event.key == pygame.K_p:
-                    print("Нажата клавиша P, переход в паузу...")
+                if menu.state == "game" and event.key == pygame.K_ESCAPE:
+                    print("Нажата клавиша ESC, переход в паузу...")
                     menu.state = "pause"
                     menu.init_pause_menu()
-                elif menu.state == "pause" and event.key == pygame.K_p:
-                    print("Нажата клавиша P, возврат в игру...")
+                elif menu.state == "pause" and event.key == pygame.K_ESCAPE:
+                    print("Нажата клавиша ESC, возврат в игру...")
                     menu.state = "game"
             if event.type == pygame.USEREVENT + 1 and menu.state == "game" and game_objects:
                 print(f"Попытка спавна мусора. Текущее количество: {len(game_objects['garbage_group'])}, max_garbage: {menu.max_garbage}")
@@ -131,21 +131,14 @@ def main():
                         asteroid.draw_hitbox(screen)
                 game_objects["ui"].draw(screen, game_objects["level"])
         else:
-            # print(f"Обновление меню, состояние: {menu.state}")
             new_state = menu.update(mouse_pos, mouse_pressed, events)
             if new_state is None:
                 print("menu.update вернул None, пропускаем рендеринг...")
                 continue
             menu.draw(screen)
             if menu.state == "main" and game_objects:
-                print(f"Сохранение при выходе в меню: balance={game_objects['level'].balance}")
-                save_data = menu.saves.get(menu.selected_account, {"balance": 0, "best_time": 0})
-                save_data["balance"] += game_objects["level"].balance
-                if menu.level_time > save_data["best_time"]:
-                        save_data["best_time"] = menu.level_time
-                menu.save_game(menu.selected_account, save_data["balance"], save_data["best_time"])
-                print(f"Баланс сохранён при выходе в главное меню: {save_data['balance']}, время: {save_data['best_time']}")
-                game_objects = None
+                print("Переход в главное меню, сброс game_objects...")
+                game_objects = None  # Сбрасываем game_objects без сохранения
 
         pygame.display.flip()
         clock.tick(FPS)

@@ -60,10 +60,12 @@ class Menu:
         print("Загрузка шрифта...")
         try:
             self.font = pygame.font.Font("assets/fonts/pixel.ttf", 36)
-            print("Шрифт загружен.")
+            self.upgrade_font = pygame.font.Font("assets/fonts/pixel.ttf", 24)  # Уменьшенный шрифт для улучшений
+            print("Шрифты загружены.")
         except FileNotFoundError:
             print("Не удалось загрузить: assets/fonts/pixel.ttf")
             self.font = pygame.font.SysFont("arial", 36)
+            self.upgrade_font = pygame.font.SysFont("arial", 24)
         try:
             print("Попытка загрузки фона...")
             self.background = pygame.image.load("assets/sprites/menu_background.png").convert()
@@ -85,6 +87,18 @@ class Menu:
             self.button_normal.fill((100, 100, 100))
             self.button_hover.fill((150, 150, 150))
             print("Дефолтные кнопки созданы.")
+        try:
+            print("Попытка загрузки кнопок покупки...")
+            self.buy_button_normal = pygame.image.load("assets/sprites/ui/buy_button_normal.png").convert_alpha()
+            self.buy_button_hover = pygame.image.load("assets/sprites/ui/buy_button_hover.png").convert_alpha()
+            print("Кнопки покупки загружены.")
+        except FileNotFoundError:
+            print("Ошибка загрузки кнопок покупки, создание дефолтных...")
+            self.buy_button_normal = pygame.Surface((150, 60))
+            self.buy_button_hover = pygame.Surface((150, 60))
+            self.buy_button_normal.fill((100, 100, 100))
+            self.buy_button_hover.fill((150, 150, 150))
+            print("Дефолтные кнопки покупки созданы.")
         try:
             print("Попытка загрузки спрайтов аккаунтов...")
             self.account_normal = pygame.image.load("assets/sprites/ui/account_normal.png").convert_alpha()
@@ -372,7 +386,7 @@ class Menu:
         self.state = "confirm_delete"
         panel_center_x = self.screen_width // 2 - 450
         panel_center_y = self.screen_height // 2 - 300
-        total_width = 150 + 20 + 150  # Две кнопки по 150px + отступ 20px
+        total_width = 150 + 20 + 150
         start_x = panel_center_x + (900 - total_width) // 2
         self.buttons = [
             Button(start_x, panel_center_y + 350, self.confirm_yes_normal, self.confirm_yes_hover, "ДА", self.font, lambda: self.delete_account()),
@@ -416,7 +430,7 @@ class Menu:
         upgrades_list = [
             ("Скорость", self.upgrade_speed, upgrades["speed_level"], base_speed * (1.2 ** upgrades["speed_level"]), "speed_level"),
             ("Прочность", self.upgrade_durability, upgrades["durability_level"], 3 + upgrades["durability_level"], "durability_level"),
-            ("Скорость", self.upgrade_unloading, upgrades["unloading_level"], 3 + 2 * upgrades["unloading_level"], "unloading_level"),
+            ("Разгрузка", self.upgrade_unloading, upgrades["unloading_level"], 3 + 2 * upgrades["unloading_level"], "unloading_level"),
             ("Радиус сбора", self.upgrade_radius, upgrades["radius_level"], 100 + 30 * upgrades["radius_level"], "radius_level"),
             ("Вместимость", self.upgrade_capacity, upgrades["capacity_level"], 10 + 10 * upgrades["capacity_level"], "capacity_level")
         ]
@@ -425,25 +439,28 @@ class Menu:
         self.upgrade_texts.clear()
         for name, icon, level, value, key in upgrades_list:
             icon_rect = icon.get_rect(topleft=(panel_center_x + 50, panel_center_y + y_offset))
-            name_text = self.font.render(name, True, (255, 255, 255))
+            name_text = self.upgrade_font.render(name, True, (255, 255, 255))
             name_rect = name_text.get_rect(topleft=(panel_center_x + 120, panel_center_y + y_offset))
-            level_text = self.font.render(f"Ур. {level}", True, (255, 255, 255))
+            level_text = self.upgrade_font.render(f"Ур. {level}", True, (255, 255, 255))
             level_rect = level_text.get_rect(topleft=(panel_center_x + 320, panel_center_y + y_offset))
-            value_text = self.font.render(f"{value:.1f}" if key == "speed_level" else str(int(value)), True, (255, 255, 255))
+            value_text = self.upgrade_font.render(f"{value:.1f}" if key == "speed_level" else str(int(value)), True, (255, 255, 255))
             value_rect = value_text.get_rect(topleft=(panel_center_x + 420, panel_center_y + y_offset))
             price = 50 * (2 ** level)
-            price_text = self.font.render(f"Цена: {price}", True, (255, 255, 255) if save_data["balance"] >= price else (255, 0, 0))
+            price_text = self.upgrade_font.render(f"Цена: {price}", True, (255, 255, 255) if save_data["balance"] >= price else (255, 0, 0))
             price_rect = price_text.get_rect(topleft=(panel_center_x + 520, panel_center_y + y_offset))
             self.buttons.append(
-                Button(panel_center_x + 700, panel_center_y + y_offset, self.button_normal, self.button_hover,
-                       "КУПИТЬ", self.font, lambda k=key, p=price, l=level: self.buy_upgrade(k, p, l))
+                Button(panel_center_x + 680, panel_center_y + y_offset, self.buy_button_normal, self.buy_button_hover,
+                       "КУПИТЬ", self.upgrade_font, lambda k=key, p=price, l=level: self.buy_upgrade(k, p, l))
             )
             self.upgrade_texts.append((icon, icon_rect, name_text, name_rect, level_text, level_rect, value_text, value_rect, price_text, price_rect))
             y_offset += 80
         self.buttons.append(
-            Button(panel_center_x + (900 - 300) // 2, panel_center_y + y_offset + 50, self.button_normal, self.button_hover,
+            Button(panel_center_x + (900 - 300) // 2, panel_center_y + y_offset + 10, self.button_normal, self.button_hover,
                    "НАЗАД", self.font, lambda: self.init_account_menu())
         )
+        # Добавляем текст баланса
+        self.balance_text = self.font.render(f"Баланс: {save_data['balance']}", True, (255, 255, 255))
+        self.balance_text_rect = self.balance_text.get_rect(center=(self.screen_width // 2, panel_center_y + 45))
         print("Меню улучшений инициализировано.")
 
     def buy_upgrade(self, upgrade_key, price, current_level):
@@ -471,7 +488,6 @@ class Menu:
             Button(start_x_sound, panel_center_y + 250, self.volume_decrease, self.volume_decrease_hover, "", self.font, lambda: self.adjust_sound_volume(-10)),
             Button(start_x_sound + 65, panel_center_y + 250, self.volume_display, self.volume_display, f"ЗВУКИ: {int(self.sound_volume)}", self.font, lambda: None),
             Button(start_x_sound + 370, panel_center_y + 250, self.volume_increase, self.volume_increase_hover, "", self.font, lambda: self.adjust_sound_volume(10)),
-            # Button(panel_center_x + (900 - 300) // 2, panel_center_y + 350, self.button_normal, self.button_hover, "ПРИМЕНИТЬ", self.font, lambda: self.apply_settings()),
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 450, self.button_normal, self.button_hover, "НАЗАД", self.font, lambda: self.init_main_menu())
         ]
         print("Меню настроек инициализировано.")
@@ -483,7 +499,6 @@ class Menu:
         self.buttons = [
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 150, self.button_normal, self.button_hover, "ПРОДОЛЖИТЬ", self.font, lambda: setattr(self, 'state', 'game')),
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 250, self.button_normal, self.button_hover, "ЗАНОВО", self.font, lambda: self.restart_level()),
-            # Button(panel_center_x + (900 - 300) // 2, panel_center_y + 350, self.button_normal, self.button_hover, "НАСТРОЙКИ", self.font, lambda: self.open_settings()),
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 350, self.button_normal, self.button_hover, "ГЛАВНОЕ МЕНЮ", self.font, lambda: self.exit_to_main_menu())
         ]
         print("Меню паузы инициализировано.")
@@ -502,7 +517,6 @@ class Menu:
             if hasattr(self, 'click_sound'):
                 self.click_sound.play()
         self.buttons = [
-            # Button(panel_center_x + (900 - 300) // 2, panel_center_y + 300, self.button_normal, self.button_hover, "ЗАНОВО", self.font, lambda: self.restart_level()),
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 400, self.button_normal, self.button_hover, "ГЛАВНОЕ МЕНЮ", self.font, lambda: self.init_main_menu())
         ]
         print("Меню 'Миссия провалена' инициализировано.")
@@ -611,7 +625,6 @@ class Menu:
         print(f"Громкость звука изменена: {self.sound_volume}")
 
     def update(self, mouse_pos, mouse_pressed, events):
-        # print(f"Обновление меню, текущее состояние: {self.state}")
         if self.state == "max_accounts":
             current_time = pygame.time.get_ticks()
             if current_time - self.message_timer >= 1500:
@@ -644,7 +657,6 @@ class Menu:
         return self.state
 
     def draw(self, screen):
-        #print(f"Рендеринг меню, состояние: {self.state}")
         screen.blit(self.background, (0, 0))
         if self.state in ["settings", "load", "account", "new_account", "upgrades", "pause", "mission_failed", "confirm_delete"]:
             panel_rect = self.settings_panel.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
@@ -670,6 +682,7 @@ class Menu:
                 text_rect = text.get_rect(center=(self.screen_width // 2, panel_rect.centery - 50))
                 screen.blit(text, text_rect)
             elif self.state == "upgrades":
+                screen.blit(self.balance_text, self.balance_text_rect)
                 for icon, icon_rect, name_text, name_rect, level_text, level_rect, value_text, value_rect, price_text, price_rect in self.upgrade_texts:
                     screen.blit(icon, icon_rect)
                     screen.blit(name_text, name_rect)
