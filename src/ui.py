@@ -55,8 +55,8 @@ class UI:
         screen.blit(self.capacity_icon, (10, 190))
         capacity_index = min(10, int(level.player.capacity / level.player.max_capacity * 10))  # 0-100% -> 0-10
         screen.blit(self.bars[capacity_index], (90, 190))
-        capacity_text = self.font.render(f"{int(level.player.capacity)}/{int(level.player.max_capacity)}", True, (255, 255, 255))
-        screen.blit(capacity_text, (500, 190))
+        # capacity_text = self.font.render(f"{int(level.player.capacity)}/{int(level.player.max_capacity)}", True, (255, 255, 255))
+        # screen.blit(capacity_text, (500, 190))
 
         # Таймер в формате MM:SS
         minutes = int(level.time_remaining // 60000)

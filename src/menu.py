@@ -78,6 +78,30 @@ class Menu:
             self.background.fill((0, 0, 0))
             print("Дефолтный фон создан.")
         try:
+            print("Попытка загрузки заголовка...")
+            self.title = pygame.image.load("assets/sprites/ui/title.png").convert_alpha()
+            self.title = pygame.transform.scale(self.title, (750, 240))
+            self.title_rect = self.title.get_rect(center=(self.screen_width // 2, self.screen_height // 2 - 330))
+            print("Заголовок загружен.")
+        except FileNotFoundError:
+            print("Ошибка загрузки заголовка, создание дефолтного...")
+            self.title = pygame.Surface((750, 240))
+            self.title.fill((100, 100, 100))
+            self.title_rect = self.title.get_rect(center=(self.screen_width // 2, self.screen_height // 2 - 330))
+            print("Дефолтный заголовок создан.")
+        try:
+            print("Попытка загрузки панели правил...")
+            self.rules_panel = pygame.image.load("assets/sprites/ui/rules_panel.png").convert_alpha()
+            self.rules_panel = pygame.transform.scale(self.rules_panel, (1200, 800))
+            self.rules_panel_rect = self.rules_panel.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
+            print("Панель правил загружена.")
+        except FileNotFoundError:
+            print("Ошибка загрузки панели правил, создание дефолтной...")
+            self.rules_panel = pygame.Surface((1200, 800))
+            self.rules_panel.fill((50, 50, 50))
+            self.rules_panel_rect = self.rules_panel.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
+            print("Дефолтная панель правил создана.")
+        try:
             print("Попытка загрузки кнопок...")
             self.button_normal = pygame.image.load("assets/sprites/ui/button_normal.png").convert_alpha()
             self.button_hover = pygame.image.load("assets/sprites/ui/button_hover.png").convert_alpha()
@@ -318,8 +342,9 @@ class Menu:
         self.buttons = [
             Button(self.screen_width // 2 - 150, self.screen_height // 2 - 150, self.button_normal, self.button_hover, "НОВАЯ ИГРА", self.font, lambda: self.init_new_account()),
             Button(self.screen_width // 2 - 150, self.screen_height // 2 - 50, self.button_normal, self.button_hover, "ЗАГРУЗИТЬ", self.font, lambda: self.open_load_menu()),
-            Button(self.screen_width // 2 - 150, self.screen_height // 2 + 50, self.button_normal, self.button_hover, "НАСТРОЙКИ", self.font, lambda: self.open_settings()),
-            Button(self.screen_width // 2 - 150, self.screen_height // 2 + 150, self.button_normal, self.button_hover, "ВЫХОД", self.font, lambda: pygame.event.post(pygame.event.Event(pygame.QUIT)))
+            Button(self.screen_width // 2 - 150, self.screen_height // 2 + 50, self.button_normal, self.button_hover, "ПРАВИЛА", self.font, lambda: self.init_rules_menu()),
+            Button(self.screen_width // 2 - 150, self.screen_height // 2 + 150, self.button_normal, self.button_hover, "НАСТРОЙКИ", self.font, lambda: self.open_settings()),
+            Button(self.screen_width // 2 - 150, self.screen_height // 2 + 250, self.button_normal, self.button_hover, "ВЫХОД", self.font, lambda: pygame.event.post(pygame.event.Event(pygame.QUIT)))
         ]
         print("Главное меню инициализировано с кнопками:", [b.text.get_at((0,0)) if b.text else None for b in self.buttons])
 
@@ -496,6 +521,14 @@ class Menu:
         ]
         print("Меню настроек инициализировано.")
 
+    def init_rules_menu(self):
+        self.state = "rules"
+        self.buttons = [
+            Button(self.screen_width // 2 - 150, self.screen_height // 2 + 320, self.button_normal, self.button_hover,
+                   "НАЗАД", self.font, lambda: self.init_main_menu())
+        ]
+        print("Меню правил инициализировано.")
+
     def init_pause_menu(self):
         self.state = "pause"
         panel_center_x = self.screen_width // 2 - 450
@@ -521,7 +554,7 @@ class Menu:
             if hasattr(self, 'click_sound'):
                 self.click_sound.play()
         self.buttons = [
-            Button(panel_center_x + (900 - 300) // 2, panel_center_y + 400, self.button_normal, self.button_hover, "Вернуться", self.font, lambda: self.init_account_menu())
+            Button(panel_center_x + (900 - 300) // 2, panel_center_y + 400, self.button_normal, self.button_hover, "ГЛАВНОЕ МЕНЮ", self.font, lambda: self.init_main_menu())
         ]
         print("Меню 'Миссия провалена' инициализировано.")
 
@@ -687,7 +720,8 @@ class Menu:
             return self.state
         for button in self.buttons:
             if button.update(mouse_pos, mouse_pressed):
-                button.action()
+                if button.action:
+                    button.action()
         if self.state == "new_account":
             for event in events:
                 if event.type == pygame.KEYDOWN:
@@ -708,9 +742,14 @@ class Menu:
     def draw(self, screen):
         screen.blit(self.background, (0, self.background_y))
         screen.blit(self.background, (0, self.background_y - self.screen_height))
-        if self.state in ["settings", "load", "account", "new_account", "upgrades", "pause", "mission_failed", "confirm_delete"]:
-            panel_rect = self.settings_panel.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
-            screen.blit(self.settings_panel, panel_rect)
+        if self.state == "main":
+            screen.blit(self.title, self.title_rect)
+        if self.state in ["rules", "settings", "load", "account", "new_account", "upgrades", "pause", "mission_failed", "confirm_delete"]:
+            if self.state == "rules":
+                screen.blit(self.rules_panel, self.rules_panel_rect)
+            else:
+                panel_rect = self.settings_panel.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
+                screen.blit(self.settings_panel, panel_rect)
             if self.state == "mission_failed":
                 text = self.font.render("Миссия провалена!", True, (255, 0, 0))
                 text_rect = text.get_rect(center=(self.screen_width // 2, panel_rect.centery - 100))
@@ -740,14 +779,9 @@ class Menu:
                     screen.blit(value_text, value_rect)
                     screen.blit(price_text, price_rect)
         elif self.state == "max_accounts":
-            panel_rect = self.settings_panel.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
-            screen.blit(self.settings_panel, panel_rect)
             if pygame.time.get_ticks() - self.message_timer < 1000:
                 text = self.font.render("Максимальное число аккаунтов!", True, (255, 0, 0))
-                text_rect = text.get_rect(center=(self.screen_width // 2, (self.screen_height // 2) - 100))
-                screen.blit(text, text_rect)
-                text = self.font.render("Удалите аккаунт чтобы создать новый.", True, (255, 0, 0))
-                text_rect = text.get_rect(center=(self.screen_width // 2, (self.screen_height // 2) - 50))
+                text_rect = text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
                 screen.blit(text, text_rect)
         for button in self.buttons:
             button.draw(screen)
