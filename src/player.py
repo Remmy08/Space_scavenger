@@ -1,5 +1,7 @@
 import pygame
 import math
+import sys  # Добавляем импорт sys
+from garbage import Garbage
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, upgrades):
@@ -23,7 +25,7 @@ class Player(pygame.sprite.Sprite):
         self.angle = 0
         self.unloading_timer = 0
 
-    def update(self, level, garbage_group, unload_zone):
+    def update(self, level, garbage_group, unload_zone, quadtree):
         keys = pygame.key.get_pressed()
         dx, dy = 0, 0
         if keys[pygame.K_w]:
@@ -61,26 +63,50 @@ class Player(pygame.sprite.Sprite):
             self.rect = self.image.get_rect(center=self.rect.center)
 
         if self.capacity < self.max_capacity:
-            for garbage in garbage_group:
-                dx = self.rect.centerx - garbage.rect.centerx
-                dy = self.rect.centery - garbage.rect.centery
-                distance = math.hypot(dx, dy)
-                if distance < self.collection_radius and distance > 0:
-                    garbage.rect.x += (dx / distance) * 5
-                    garbage.rect.y += (dy / distance) * 5
-                    if distance < 40:
-                        garbage.kill()
-                        self.capacity = min(self.max_capacity, self.capacity + 1)
-                        print(f"Собран мусор: capacity={self.capacity}/{self.max_capacity}")
+            # Создаём прямоугольник для радиуса сбора
+            collection_rect = pygame.Rect(
+                self.rect.centerx - self.collection_radius,
+                self.rect.centery - self.collection_radius,
+                self.collection_radius * 2,
+                self.collection_radius * 2
+            )
+            # Получаем потенциальные объекты столкновений из QuadTree
+            try:
+                print("Получение объектов из QuadTree...")
+                potential_collisions = quadtree.retrieve(collection_rect)
+                print(f"Найдено {len(potential_collisions)} потенциальных столкновений")
+            except Exception as e:
+                print(f"Ошибка в QuadTree retrieve: {e}", file=sys.stderr)
+                potential_collisions = []
+            for garbage in potential_collisions:
+                try:
+                    if isinstance(garbage, Garbage):  # Проверяем, что объект — мусор
+                        dx = self.rect.centerx - garbage.rect.centerx
+                        dy = self.rect.centery - garbage.rect.centery
+                        distance = math.hypot(dx, dy)
+                        if distance < self.collection_radius and distance > 0:
+                            garbage.rect.x += (dx / distance) * 5
+                            garbage.rect.y += (dy / distance) * 5  # Исправлено: garbage_rect.y → garbage.rect.y
+                            if distance < 40:
+                                garbage.kill()
+                                self.capacity = min(self.max_capacity, self.capacity + 1)
+                                print(f"Собран мусор: capacity={self.capacity}/{self.max_capacity}")
+                except Exception as e:
+                    print(f"Ошибка при обработке Garbage: {e}", file=sys.stderr)
+                    continue
 
         if self.capacity > 0 and pygame.sprite.collide_rect(self, unload_zone):
-            self.unloading_timer += 1000 / 60  # Дельта времени в мс (при 60 FPS)
-            unload_amount = (self.unloading_speed * self.unloading_timer) // 1000
-            if unload_amount >= 1:
-                self.capacity = max(0, self.capacity - int(unload_amount))
-                level.add_balance(int(unload_amount))  # Добавляем выгруженный мусор в баланс
-                self.unloading_timer -= (int(unload_amount) * 1000) / self.unloading_speed
-                print(f"Выгрузка: unload_amount={unload_amount}, capacity={self.capacity}, balance={level.balance}")
+            try:
+                self.unloading_timer += 1000 / 60  # Дельта времени в мс (при 60 FPS)
+                unload_amount = (self.unloading_speed * self.unloading_timer) // 1000
+                if unload_amount >= 1:
+                    self.capacity = max(0, self.capacity - int(unload_amount))
+                    level.add_balance(int(unload_amount))  # Добавляем выгруженный мусор в баланс
+                    self.unloading_timer -= (int(unload_amount) * 1000) / self.unloading_speed
+                    print(f"Выгрузка: unload_amount={unload_amount}, capacity={self.capacity}, balance={level.balance}")
+            except Exception as e:
+                print(f"Ошибка при выгрузке: {e}", file=sys.stderr)
+                self.unloading_timer = 0
         else:
             self.unloading_timer = 0
 

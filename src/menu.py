@@ -500,9 +500,9 @@ class Menu:
         base_speed = 5.0
         y_offset = 100
         upgrades_list = [
-            ("Скорость", self.upgrade_speed, upgrades["speed_level"], base_speed * (1.2 ** upgrades["speed_level"]), "speed_level"),
+            ("Скорость", self.upgrade_speed, upgrades["speed_level"], base_speed + upgrades["speed_level"], "speed_level"),
             ("Прочность", self.upgrade_durability, upgrades["durability_level"], 3 + upgrades["durability_level"], "durability_level"),
-            ("Скорость", self.upgrade_unloading, upgrades["unloading_level"], 3 + 2 * upgrades["unloading_level"], "unloading_level"),
+            ("Разгрузка", self.upgrade_unloading, upgrades["unloading_level"], 3 + 2 * upgrades["unloading_level"], "unloading_level"),
             ("Радиус сбора", self.upgrade_radius, upgrades["radius_level"], 100 + 30 * upgrades["radius_level"], "radius_level"),
             ("Вместимость", self.upgrade_capacity, upgrades["capacity_level"], 10 + 10 * upgrades["capacity_level"], "capacity_level")
         ]
@@ -763,7 +763,7 @@ class Menu:
         print(f"Громкость звука изменена: {self.sound_volume}")
 
     def update(self, mouse_pos, mouse_pressed, events):
-        print(f"Обновление меню, текущее состояние: {self.state}")
+        # print(f"Обновление меню, текущее состояние: {self.state}")
         self.background_y += self.background_speed
         if self.background_y >= self.screen_height:
             self.background_y -= self.screen_height
@@ -843,4 +843,4 @@ class Menu:
                 screen.blit(text, text_rect)
         for button in self.buttons:
             button.draw(screen)
-        print(f"Отрисовка меню завершена, состояние: {self.state}")
+        # print(f"Отрисовка меню завершена, состояние: {self.state}")

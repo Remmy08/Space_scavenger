@@ -1,13 +1,23 @@
 import sys
-import pygame
-from player import Player
-from garbage import Garbage
-from asteroid import Asteroid
-from ui import UI
-from level import Level
-from menu import Menu
 import os
-import json
+import pygame
+
+# Добавляем папку src в sys.path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+print("sys.path:", sys.path)
+
+try:
+    from player import Player
+    from garbage import Garbage
+    from asteroid import Asteroid
+    from ui import UI
+    from level import Level
+    from menu import Menu
+    from quadtree import QuadTree
+except ImportError as e:
+    print(f"Ошибка импорта модулей: {e}", file=sys.stderr)
+    input("Нажмите Enter для выхода...")
+    sys.exit(1)
 
 try:
     pygame.init()
@@ -22,6 +32,9 @@ except Exception as e:
     sys.exit(1)
 
 def main():
+    print("Текущая директория:", os.getcwd())
+    print("Список файлов:", os.listdir('.'))
+    print("Список файлов в src:", os.listdir(os.path.dirname(os.path.abspath(__file__))))
     menu = Menu(BASE_WIDTH, BASE_HEIGHT)
     game_objects = None
     running = True
@@ -46,11 +59,24 @@ def main():
             if event.type == pygame.USEREVENT + 1 and menu.state == "game" and game_objects:
                 print(f"Попытка спавна мусора. Текущее количество: {len(game_objects['garbage_group'])}, max_garbage: {menu.max_garbage}")
                 if len(game_objects["garbage_group"]) < menu.max_garbage:
-                    game_objects["garbage_group"].add(Garbage(BASE_WIDTH, BASE_HEIGHT, menu.current_level))
+                    try:
+                        print("Создание нового Garbage...")
+                        new_garbage = Garbage(BASE_WIDTH, BASE_HEIGHT, menu.current_level)
+                        game_objects["garbage_group"].add(new_garbage)
+                        print("Garbage успешно добавлен")
+                    except NameError as ne:
+                        print(f"NameError при спавне Garbage: {ne}", file=sys.stderr)
+                        raise
+                    except Exception as e:
+                        print(f"Ошибка при спавне Garbage: {e}", file=sys.stderr)
+                        raise
             if event.type == pygame.USEREVENT + 2 and menu.state == "game" and game_objects:
                 print(f"Попытка спавна астероида. Текущее количество: {len(game_objects['asteroid_group'])}, max: {2 + (menu.current_level - 1)}")
                 if len(game_objects["asteroid_group"]) < 2 + (menu.current_level - 1):
-                    game_objects["asteroid_group"].add(Asteroid(BASE_WIDTH, BASE_HEIGHT, menu.current_level, menu.asteroid_speed))
+                    try:
+                        game_objects["asteroid_group"].add(Asteroid(BASE_WIDTH, BASE_HEIGHT, menu.current_level, menu.asteroid_speed))
+                    except Exception as e:
+                        print(f"Ошибка при спавне Asteroid: {e}")
 
         if menu.state == "game":
             print(f"Состояние игры: game_objects = {bool(game_objects)}")
@@ -70,8 +96,15 @@ def main():
                         background = pygame.Surface((BASE_WIDTH, BASE_HEIGHT))
                         background.fill((0, 0, 0))
                         print("Не удалось загрузить: assets/sprites/background.png")
+                    print("Попытка добавить начальный мусор...")
                     for _ in range(5 + (menu.current_level - 1) * 2):
-                        garbage_group.add(Garbage(BASE_WIDTH, BASE_HEIGHT, menu.current_level))
+                        try:
+                            garbage = Garbage(BASE_WIDTH, BASE_HEIGHT, menu.current_level)
+                            garbage_group.add(garbage)
+                            print("Начальный Garbage добавлен")
+                        except Exception as e:
+                            print(f"Ошибка при создании начального Garbage: {e}")
+                            raise
                     garbage_spawn_timer = pygame.USEREVENT + 1
                     pygame.time.set_timer(garbage_spawn_timer, int(menu.garbage_spawn_timer))
                     asteroid_spawn_timer = pygame.USEREVENT + 2
@@ -87,28 +120,39 @@ def main():
                         "garbage_spawn_timer": garbage_spawn_timer,
                         "asteroid_spawn_timer": asteroid_spawn_timer,
                         "background_y": 0,
-                        "background_speed": 1
+                        "background_speed": 1,
+                        "quadtree": QuadTree(pygame.Rect(0, 0, BASE_WIDTH, BASE_HEIGHT), capacity=4)
                     }
                     print("game_objects инициализирован")
                 except Exception as e:
                     print(f"Ошибка инициализации game_objects: {e}")
                     game_objects = None
+                    raise
 
             if game_objects:
                 print(f"Обновление объектов игры... Время: {menu.level_time}, Загрязнение: {game_objects['level'].pollution}, Прочность: {game_objects['player'].durability}")
                 game_objects["background_y"] += game_objects["background_speed"]
                 if game_objects["background_y"] >= BASE_HEIGHT:
                     game_objects["background_y"] -= BASE_HEIGHT
-                game_objects["player"].update(game_objects["level"], game_objects["garbage_group"], game_objects["level"].unload_zone)
+                
+                game_objects["quadtree"].clear()
+                for garbage in game_objects["garbage_group"]:
+                    game_objects["quadtree"].insert(garbage)
+                for asteroid in game_objects["asteroid_group"]:
+                    game_objects["quadtree"].insert(asteroid)
+
+                game_objects["player"].update(game_objects["level"], game_objects["garbage_group"], game_objects["level"].unload_zone, game_objects["quadtree"])
                 game_objects["garbage_group"].update(game_objects["player"])
                 game_objects["asteroid_group"].update()
                 game_objects["level"].update(menu.level_time, menu)
                 menu.level_time += 1000 / FPS
 
-                asteroid_collisions = pygame.sprite.spritecollide(game_objects["player"], game_objects["asteroid_group"], False)
-                for asteroid in asteroid_collisions:
-                    game_objects["player"].durability = max(0, game_objects["player"].durability - 1)
-                    asteroid.kill()
+                player_rect = game_objects["player"].rect
+                potential_collisions = game_objects["quadtree"].retrieve(player_rect)
+                for asteroid in potential_collisions:
+                    if isinstance(asteroid, Asteroid) and player_rect.colliderect(asteroid.rect):
+                        game_objects["player"].durability = max(0, game_objects["player"].durability - 1)
+                        asteroid.kill()
 
                 if game_objects["level"].pollution >= 100 or game_objects["player"].durability <= 0:
                     print(f"Условие завершения: pollution={game_objects['level'].pollution}, balance={game_objects['level'].balance}, durability={game_objects['player'].durability}")
@@ -138,7 +182,7 @@ def main():
                 game_objects["ui"].draw(screen, game_objects["level"])
         else:
             new_state = menu.update(mouse_pos, mouse_pressed, events)
-            print(f"Menu.update вернул: {new_state}")
+            # print(f"Menu.update вернул: {new_state}")
             if new_state is None:
                 print("Menu.update вернул None, продолжаем рендеринг...")
             menu.draw(screen)
