@@ -26,14 +26,14 @@ class Level:
         self.unload_zone = UnloadZone(1920 // 2, 1080 - 50)
         self.pollution = 0
         self.balance = 0
-        self.time_remaining = 0  # Начинаем с 0 для бесконечного режима
+        self.time_remaining = 0 
         self.level_num = level_num
-        self.pollution_rate = 0.2  # Базовый прирост загрязнения
+        self.pollution_rate = 0.2 
         self.delta_time = 0
-        self.progression_timer = 0  # Таймер для усложнения каждые 30 секунд
+        self.progression_timer = 0  
 
     def update(self, time_left, menu):
-        self.time_remaining = time_left  # Обновляем время
+        self.time_remaining = time_left  
         self.delta_time += 1000 / 60
         self.progression_timer += 1000 / 60
         pollution_increase = 0
@@ -42,7 +42,6 @@ class Level:
             self.pollution += pollution_increase * (self.delta_time / 1000)
             self.delta_time = 0
         self.pollution = min(100, self.pollution)
-        print(f"Delta time: {self.delta_time}, Увеличение загрязнения: {pollution_increase * (self.delta_time / 1000)}, Общее загрязнение: {self.pollution}")
 
         # Усложнение каждые 30 секунд
         if self.progression_timer >= 30000:

@@ -20,7 +20,7 @@ class Button:
         self.action = action
         self.is_hovered = False
         self.was_pressed = False
-        self.account_name = account_name  # Сохраняем имя аккаунта для кнопок аккаунтов
+        self.account_name = account_name 
         pygame.mixer.init()
         print("Инициализация звука кнопки...")
         try:
@@ -249,7 +249,6 @@ class Menu:
         print("Сохранения загружены.")
         print("Инициализация главного меню...")
         self.init_main_menu()
-        # Применяем загруженную громкость к кнопкам
         for button in self.buttons:
             button.set_sound_volume(self.sound_volume)
         print("Menu инициализирован.")
@@ -264,7 +263,6 @@ class Menu:
                     self.fullscreen = settings.get("fullscreen", False)
                     pygame.mixer.music.set_volume(self.music_volume / 100.0)
                     print(f"Настройки загружены: music_volume={self.music_volume}, sound_volume={self.sound_volume}, fullscreen={self.fullscreen}")
-                    # Применяем громкость к существующим кнопкам
                     for button in self.buttons:
                         button.set_sound_volume(self.sound_volume)
             except Exception as e:
@@ -359,10 +357,8 @@ class Menu:
             Button(self.screen_width // 2 - 150, self.screen_height // 2 + 150, self.button_normal, self.button_hover, "НАСТРОЙКИ", self.font, lambda: self.open_settings()),
             Button(self.screen_width // 2 - 150, self.screen_height // 2 + 250, self.button_normal, self.button_hover, "ВЫХОД", self.font, lambda: pygame.event.post(pygame.event.Event(pygame.QUIT)))
         ]
-        # Применяем громкость к новым кнопкам
         for button in self.buttons:
             button.set_sound_volume(self.sound_volume)
-        # Загружаем музыку меню
         pygame.mixer.music.stop()
         try:
             pygame.mixer.music.load("assets/sounds/menu_music.mp3")
@@ -382,7 +378,6 @@ class Menu:
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 350, self.button_normal, self.button_hover, "СОЗДАТЬ", self.font, lambda: self.create_new_game() if self.input_text.strip() else None),
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 450, self.button_normal, self.button_hover, "НАЗАД", self.font, lambda: self.init_main_menu())
         ]
-        # Применяем громкость к новым кнопкам
         for button in self.buttons:
             button.set_sound_volume(self.sound_volume)
         self.input_text_surface = self.font.render(self.input_text.upper(), True, (255, 255, 255))
@@ -401,9 +396,6 @@ class Menu:
             self.selected_account = account_name
             self.save_game(account_name, 0, 0)
             self.init_account_menu()
-            print(f"Создан новый аккаунт: {account_name}")
-        else:
-            print(f"Ошибка создания аккаунта: имя '{account_name}' уже существует или пустое")
 
     def init_load_menu(self):
         self.state = "load"
@@ -431,7 +423,6 @@ class Menu:
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + y_offset + 160, self.button_normal, self.button_hover,
                    "НАЗАД", self.font, lambda: self.init_main_menu())
         ])
-        # Применяем громкость к новым кнопкам
         for button in self.buttons:
             button.set_sound_volume(self.sound_volume)
         print("Меню загрузки инициализировано.")
@@ -458,7 +449,6 @@ class Menu:
             Button(start_x, panel_center_y + 350, self.confirm_yes_normal, self.confirm_yes_hover, "ДА", self.font, lambda: self.delete_account()),
             Button(start_x + 170, panel_center_y + 350, self.confirm_no_normal, self.confirm_no_hover, "НЕТ", self.font, lambda: self.init_load_menu())
         ]
-        # Применяем громкость к новым кнопкам
         for button in self.buttons:
             button.set_sound_volume(self.sound_volume)
         print("Меню подтверждения удаления инициализировано.")
@@ -472,7 +462,6 @@ class Menu:
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 300, self.button_normal, self.button_hover, "УЛУЧШЕНИЯ", self.font, lambda: self.open_upgrades()),
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 400, self.button_normal, self.button_hover, "НАЗАД", self.font, lambda: self.init_load_menu())
         ]
-        # Применяем громкость к новым кнопкам
         for button in self.buttons:
             button.set_sound_volume(self.sound_volume)
         save_data = self.saves.get(self.selected_account, {"balance": 0, "best_time": 0})
@@ -532,7 +521,6 @@ class Menu:
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + y_offset + 10, self.button_normal, self.button_hover,
                    "НАЗАД", self.font, lambda: self.init_account_menu())
         )
-        # Применяем громкость к новым кнопкам
         for button in self.buttons:
             button.set_sound_volume(self.sound_volume)
         self.balance_text = self.font.render(f"Баланс: {save_data['balance']}", True, (255, 255, 255))
@@ -547,9 +535,6 @@ class Menu:
             save_data["upgrades"][upgrade_key] = current_level + 1
             self.save_game(self.selected_account, save_data["balance"], save_data.get("best_time", 0))
             self.init_upgrades()
-            print(f"Куплено улучшение {upgrade_key}, новый уровень: {current_level + 1}, баланс: {save_data['balance']}")
-        else:
-            print(f"Недостаточно средств или максимальный уровень для {upgrade_key}, цена: {price}, баланс: {save_data['balance']}")
 
     def init_settings(self):
         self.state = "settings"
@@ -567,7 +552,6 @@ class Menu:
             Button(start_x_sound + 370, panel_center_y + 250, self.volume_increase, self.volume_increase_hover, "", self.font, lambda: self.adjust_sound_volume(10)),
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 450, self.button_normal, self.button_hover, "НАЗАД", self.font, lambda: self.init_main_menu())
         ]
-        # Применяем громкость к новым кнопкам
         for button in self.buttons:
             button.set_sound_volume(self.sound_volume)
         print("Меню настроек инициализировано.")
@@ -578,7 +562,6 @@ class Menu:
             Button(self.screen_width // 2 - 150, self.screen_height // 2 + 320, self.button_normal, self.button_hover,
                    "НАЗАД", self.font, lambda: self.init_main_menu())
         ]
-        # Применяем громкость к новым кнопкам
         for button in self.buttons:
             button.set_sound_volume(self.sound_volume)
         print("Меню правил инициализировано.")
@@ -592,21 +575,18 @@ class Menu:
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 250, self.button_normal, self.button_hover, "ЗАНОВО", self.font, lambda: self.restart_level()),
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 350, self.button_normal, self.button_hover, "ГЛАВНОЕ МЕНЮ", self.font, lambda: self.exit_to_main_menu())
         ]
-        # Применяем громкость к новым кнопкам
         for button in self.buttons:
             button.set_sound_volume(self.sound_volume)
-        print("Меню паузы инициализировано.")
 
     def init_mission_failed(self):
         self.state = "mission_failed"
         panel_center_x = self.screen_width // 2 - 450
         panel_center_y = self.screen_height // 2 - 300
-        pygame.mixer.music.stop()  # Останавливаем игровую музыку
+        pygame.mixer.music.stop() 
         try:
             fail_sound = pygame.mixer.Sound("assets/sounds/mission_failed.wav")
             fail_sound.set_volume(self.sound_volume / 100.0)
             fail_sound.play()
-            print("Звук 'Миссия провалена' воспроизведён.")
         except FileNotFoundError:
             print("Не удалось загрузить: assets/sounds/mission_failed.wav")
             if hasattr(self, 'click_sound'):
@@ -614,7 +594,6 @@ class Menu:
         self.buttons = [
             Button(panel_center_x + (900 - 300) // 2, panel_center_y + 400, self.button_normal, self.button_hover, "ГЛАВНОЕ МЕНЮ", self.font, lambda: self.init_account_menu())
         ]
-        # Применяем громкость к новым кнопкам
         for button in self.buttons:
             button.set_sound_volume(self.sound_volume)
         print("Меню 'Миссия провалена' инициализировано.")
@@ -763,7 +742,6 @@ class Menu:
         print(f"Громкость звука изменена: {self.sound_volume}")
 
     def update(self, mouse_pos, mouse_pressed, events):
-        # print(f"Обновление меню, текущее состояние: {self.state}")
         self.background_y += self.background_speed
         if self.background_y >= self.screen_height:
             self.background_y -= self.screen_height
@@ -843,4 +821,3 @@ class Menu:
                 screen.blit(text, text_rect)
         for button in self.buttons:
             button.draw(screen)
-        # print(f"Отрисовка меню завершена, состояние: {self.state}")

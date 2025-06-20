@@ -1,6 +1,6 @@
 import pygame
 import math
-import sys  # Добавляем импорт sys
+import sys
 from garbage import Garbage
 
 class Player(pygame.sprite.Sprite):
@@ -8,17 +8,15 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
         try:
             self.original_image = pygame.image.load("assets/sprites/ship.png").convert_alpha()
-            print("Loaded: assets/sprites/ship.png")
         except FileNotFoundError:
             self.original_image = pygame.Surface((256, 256))
             self.original_image.fill((0, 255, 0))
-            print("Failed to load: assets/sprites/ship.png")
         self.image = self.original_image
         self.rect = self.image.get_rect(center=(x, y))
         self.speed = upgrades.get("speed", 5.0)
         self.durability = upgrades.get("durability", 3)
-        self.max_durability = self.durability  # Для UI
-        self.unloading_speed = upgrades.get("unloading_speed", 3)  # Мусор/сек
+        self.max_durability = self.durability  
+        self.unloading_speed = upgrades.get("unloading_speed", 3) 
         self.collection_radius = upgrades.get("collection_radius", 100)
         self.max_capacity = upgrades.get("capacity", 10)
         self.capacity = 0
@@ -63,47 +61,41 @@ class Player(pygame.sprite.Sprite):
             self.rect = self.image.get_rect(center=self.rect.center)
 
         if self.capacity < self.max_capacity:
-            # Создаём прямоугольник для радиуса сбора
             collection_rect = pygame.Rect(
                 self.rect.centerx - self.collection_radius,
                 self.rect.centery - self.collection_radius,
                 self.collection_radius * 2,
                 self.collection_radius * 2
             )
-            # Получаем потенциальные объекты столкновений из QuadTree
             try:
-                print("Получение объектов из QuadTree...")
                 potential_collisions = quadtree.retrieve(collection_rect)
-                print(f"Найдено {len(potential_collisions)} потенциальных столкновений")
             except Exception as e:
                 print(f"Ошибка в QuadTree retrieve: {e}", file=sys.stderr)
                 potential_collisions = []
             for garbage in potential_collisions:
                 try:
-                    if isinstance(garbage, Garbage):  # Проверяем, что объект — мусор
+                    if isinstance(garbage, Garbage):
                         dx = self.rect.centerx - garbage.rect.centerx
                         dy = self.rect.centery - garbage.rect.centery
                         distance = math.hypot(dx, dy)
                         if distance < self.collection_radius and distance > 0:
                             garbage.rect.x += (dx / distance) * 5
-                            garbage.rect.y += (dy / distance) * 5  # Исправлено: garbage_rect.y → garbage.rect.y
+                            garbage.rect.y += (dy / distance) * 5
                             if distance < 40:
                                 garbage.kill()
                                 self.capacity = min(self.max_capacity, self.capacity + 1)
-                                print(f"Собран мусор: capacity={self.capacity}/{self.max_capacity}")
                 except Exception as e:
                     print(f"Ошибка при обработке Garbage: {e}", file=sys.stderr)
                     continue
 
         if self.capacity > 0 and pygame.sprite.collide_rect(self, unload_zone):
             try:
-                self.unloading_timer += 1000 / 60  # Дельта времени в мс (при 60 FPS)
+                self.unloading_timer += 1000 / 60
                 unload_amount = (self.unloading_speed * self.unloading_timer) // 1000
                 if unload_amount >= 1:
                     self.capacity = max(0, self.capacity - int(unload_amount))
-                    level.add_balance(int(unload_amount))  # Добавляем выгруженный мусор в баланс
+                    level.add_balance(int(unload_amount))
                     self.unloading_timer -= (int(unload_amount) * 1000) / self.unloading_speed
-                    print(f"Выгрузка: unload_amount={unload_amount}, capacity={self.capacity}, balance={level.balance}")
             except Exception as e:
                 print(f"Ошибка при выгрузке: {e}", file=sys.stderr)
                 self.unloading_timer = 0

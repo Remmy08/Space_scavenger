@@ -2,7 +2,7 @@ import sys
 import os
 import pygame
 
-# Добавляем папку src в sys.path
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 print("sys.path:", sys.path)
 
@@ -79,7 +79,6 @@ def main():
                         print(f"Ошибка при спавне Asteroid: {e}")
 
         if menu.state == "game":
-            print(f"Состояние игры: game_objects = {bool(game_objects)}")
             if not game_objects:
                 print("Инициализация game_objects...")
                 try:
@@ -130,7 +129,6 @@ def main():
                     raise
 
             if game_objects:
-                print(f"Обновление объектов игры... Время: {menu.level_time}, Загрязнение: {game_objects['level'].pollution}, Прочность: {game_objects['player'].durability}")
                 game_objects["background_y"] += game_objects["background_speed"]
                 if game_objects["background_y"] >= BASE_HEIGHT:
                     game_objects["background_y"] -= BASE_HEIGHT
@@ -182,7 +180,6 @@ def main():
                 game_objects["ui"].draw(screen, game_objects["level"])
         else:
             new_state = menu.update(mouse_pos, mouse_pressed, events)
-            # print(f"Menu.update вернул: {new_state}")
             if new_state is None:
                 print("Menu.update вернул None, продолжаем рендеринг...")
             menu.draw(screen)
